@@ -1,0 +1,1 @@
+Lege dein Bild als assets/Foto.jpg ab und lade alles per FileZilla hoch.
