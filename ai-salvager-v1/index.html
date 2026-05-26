@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="AI Salvager - ein modernes browserbasiertes Sci-Fi Indie-Game." />
+  <title>AI Salvager</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" />
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="gameCanvas" aria-label="AI Salvager Game Canvas"></canvas>
+
+    <div class="vignette"></div>
+    <div class="scanlines"></div>
+
+    <section id="startScreen" class="screen screen--active">
+      <div class="hero-card">
+        <div class="eyebrow">DEEP SPACE RECOVERY UNIT</div>
+        <h1>AI Salvager</h1>
+        <p class="lead">
+          Sammle verlorene KI-Fragmente in zerstörten Welten.
+          Weiche Trümmern aus, spare Energie und bringe die Wahrheit zurück.
+        </p>
+
+        <div class="ship-preview" aria-hidden="true">
+          <div class="ship-preview__core"></div>
+        </div>
+
+        <div class="menu-actions">
+          <button id="startButton" class="primary-button">Mission starten</button>
+          <button id="howToButton" class="ghost-button">Steuerung</button>
+        </div>
+
+        <div id="howToPanel" class="howto">
+          <strong>Steuerung:</strong>
+          <span>WASD / Pfeiltasten bewegen</span>
+          <span>Maus oder Touch zieht das Schiff sanft zum Ziel</span>
+          <span>ESC pausiert</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="pauseScreen" class="screen">
+      <div class="modal-card">
+        <div class="eyebrow">SYSTEM HOLD</div>
+        <h2>Pause</h2>
+        <p>Die Mission wurde angehalten.</p>
+        <button id="resumeButton" class="primary-button">Weiter</button>
+      </div>
+    </section>
+
+    <div id="hud" class="hud hud--hidden">
+      <div class="hud__panel">
+        <span class="hud__label">ENERGIE</span>
+        <div class="energy-bar"><div id="energyFill"></div></div>
+      </div>
+      <div class="hud__panel">
+        <span class="hud__label">SCORE</span>
+        <strong id="scoreText">0</strong>
+      </div>
+      <div class="hud__panel hide-small">
+        <span class="hud__label">STATUS</span>
+        <strong>SCAN READY</strong>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

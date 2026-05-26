@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hagen Struve | AI Product Builder</title>
+  <style>
+    :root {
+      --bg: #050706;
+      --panel: rgba(8, 13, 10, .62);
+      --panel-2: rgba(255,255,255,.055);
+      --border: rgba(255,255,255,.14);
+      --text: #f5fff7;
+      --muted: #b7c5bd;
+      --green: #69f08a;
+      --green-soft: rgba(105,240,138,.2);
+      --cyan: #74f0df;
+      --gold: #f2c14e;
+      --mx: 0;
+      --my: 0;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background: #020403;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    #particleWorld {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 68% 42%, rgba(105,240,138,.14), transparent 34rem),
+        radial-gradient(circle at 18% 72%, rgba(116,240,223,.08), transparent 28rem),
+        linear-gradient(120deg, #020403, #07100b 45%, #030605);
+    }
+
+    .vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 58% 46%, transparent 0 52%, rgba(0,0,0,.08) 68%, rgba(0,0,0,.5) 100%),
+        linear-gradient(90deg, rgba(0,0,0,.58), transparent 23%, transparent 78%, rgba(0,0,0,.32));
+    }
+
+    .grain {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: .08;
+      background-image: radial-gradient(rgba(255,255,255,.8) 1px, transparent 1px);
+      background-size: 4px 4px;
+      mix-blend-mode: screen;
+    }
+
+    .side {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 88px;
+      z-index: 80;
+      border-right: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      backdrop-filter: blur(12px);
+      display: grid;
+      grid-template-rows: 92px 1fr 120px;
+      justify-items: center;
+    }
+
+    .side-logo {
+      align-self: center;
+      font-size: 26px;
+      letter-spacing: -.08em;
+      color: rgba(255,255,255,.92);
+    }
+
+    .side-nav {
+      display: grid;
+      align-content: center;
+      gap: 22px;
+    }
+
+    .side-nav a {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      color: rgba(255,255,255,.52);
+      border: 1px solid transparent;
+      transition: .25s ease;
+      font-size: 19px;
+    }
+
+    .side-nav a:hover,
+    .side-nav a.active {
+      color: var(--green);
+      border-color: rgba(105,240,138,.35);
+      background: rgba(105,240,138,.08);
+      box-shadow: 0 0 30px rgba(105,240,138,.12);
+      transform: translateY(-2px);
+    }
+
+    .scroll-hint {
+      align-self: end;
+      padding-bottom: 28px;
+      display: grid;
+      justify-items: center;
+      gap: 9px;
+      color: rgba(255,255,255,.55);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      writing-mode: vertical-rl;
+    }
+
+    .mouse {
+      width: 28px;
+      height: 46px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.55);
+      position: relative;
+      writing-mode: initial;
+    }
+
+    .mouse::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 9px;
+      width: 4px;
+      height: 4px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: var(--green);
+      animation: wheel 1.7s infinite;
+    }
+
+    .topbar {
+      position: fixed;
+      top: 26px;
+      right: 30px;
+      left: 120px;
+      z-index: 70;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 34px;
+      pointer-events: none;
+    }
+
+    .topbar nav {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      pointer-events: auto;
+    }
+
+    .topbar nav a {
+      color: rgba(255,255,255,.88);
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      transition: .22s ease;
+    }
+
+    .topbar nav a:hover { color: var(--green); }
+
+    .talk {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      padding: 13px 21px;
+      border-radius: 999px;
+      border: 1px solid rgba(105,240,138,.55);
+      color: rgba(255,255,255,.95);
+      background: rgba(0,0,0,.72);
+      box-shadow: 0 0 30px rgba(105,240,138,.12);
+      font-size: 13px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      transition: .25s ease;
+    }
+
+    .talk::after {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 18px var(--green);
+    }
+
+    .talk:hover { transform: translateY(-2px); background: rgba(105,240,138,.08); }
+
+    .stage {
+      width: min(1280px, calc(100% - 150px));
+      margin-left: max(120px, calc((100vw - 1280px) / 2 + 88px));
+      position: relative;
+      z-index: 10;
+    }
+
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1.02fr .98fr;
+      align-items: center;
+      gap: 60px;
+      padding: 110px 0 80px;
+    }
+
+    .hero-copy {
+      display:grid;
+      grid-template-columns: minmax(0,1fr) 180px;
+      gap: 30px;
+      align-items:center;
+      max-width: 720px;
+      position: relative;
+      padding: 34px 36px 36px;
+      border-radius: 30px;
+      transform: translate3d(calc(var(--mx) * -10px), calc(var(--my) * -8px), 0);
+      isolation: isolate;
+    }
+
+    .hero-image {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 1px solid rgba(105,240,138,.34);
+      box-shadow:
+        0 0 0 10px rgba(105,240,138,.05),
+        0 0 60px rgba(105,240,138,.16),
+        0 30px 90px rgba(0,0,0,.5);
+      transform: translate3d(calc(var(--mx) * 10px), calc(var(--my) * 10px), 0);
+      justify-self:end;
+      background: rgba(0,0,0,.4);
+    }
+
+    .hero-image::after {
+      content:"";
+      position:absolute;
+      inset:0;
+      background: radial-gradient(circle at 50% 20%, transparent, rgba(0,0,0,.18));
+      pointer-events:none;
+    }
+
+    .hero-image img {
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      filter: saturate(.92) contrast(1.04);
+    }
+
+    .hero-main { min-width:0; }
+
+    .hero-copy::before {
+      content: "";
+      position: absolute;
+      inset: -38px -54px -42px -44px;
+      z-index: -1;
+      border-radius: 42px;
+      background: radial-gradient(circle at 34% 42%, rgba(0,0,0,.92), rgba(0,0,0,.72) 42%, rgba(0,0,0,.32) 68%, transparent 100%);
+      backdrop-filter: blur(3px);
+      box-shadow: 0 0 110px rgba(0,0,0,.72);
+    }
+
+    .kicker {
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      font-weight: 800;
+      font-size: 14px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px rgba(105,240,138,.25);
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      font-size: clamp(48px, 7vw, 92px);
+      line-height: .95;
+      letter-spacing: .03em;
+      font-weight: 300;
+      text-transform: uppercase;
+      text-shadow: 0 0 12px rgba(0,0,0,.9), 0 0 34px rgba(0,0,0,.8), 0 0 42px rgba(255,255,255,.12);
+    }
+
+    .name { display: block; white-space: nowrap; font-weight: 300; }
+
+    .role {
+      margin: 0 0 12px;
+      font-size: clamp(24px, 3.2vw, 44px);
+      line-height: 1.1;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      font-weight: 300;
+    }
+
+    .role strong { color: var(--green); font-weight: 400; text-shadow: 0 0 28px rgba(105,240,138,.36); }
+
+    .subrole {
+      margin: 0 0 32px;
+      color: rgba(255,255,255,.82);
+      font-size: clamp(17px, 1.8vw, 24px);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-weight: 300;
+    }
+
+    .lead { max-width: 570px; color: rgba(255,255,255,.9); font-size: 17px; line-height: 1.75; margin: 0 0 30px; }
+
+    .button-row { display: flex; flex-wrap: wrap; gap: 14px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      border-radius: 999px;
+      padding: 15px 25px;
+      border: 1px solid rgba(105,240,138,.55);
+      background: rgba(0,0,0,.58);
+      color: rgba(255,255,255,.92);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 0 34px rgba(105,240,138,.1);
+      transition: .25s ease;
+    }
+
+    .btn:hover { transform: translateY(-3px); background: rgba(105,240,138,.08); box-shadow: 0 0 54px rgba(105,240,138,.22); }
+    .btn.secondary { border-color: rgba(255,255,255,.2); color: rgba(255,255,255,.72); }
+
+    .focus-panel {
+      justify-self: end;
+      width: min(360px, 100%);
+      padding: 30px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(3,7,5,.94), rgba(3,7,5,.82));
+      backdrop-filter: blur(14px);
+      box-shadow: 0 30px 110px rgba(0,0,0,.62), 0 0 70px rgba(0,0,0,.48);
+      transform: perspective(900px) rotateY(calc(var(--mx) * -7deg)) rotateX(calc(var(--my) * 5deg));
+    }
+
+    .panel-title { margin: 0 0 20px; text-transform: uppercase; letter-spacing: .08em; font-size: 15px; }
+    .panel-title::after { content: ""; display: block; width: 48px; height: 1px; margin-top: 10px; background: var(--green); box-shadow: 0 0 16px var(--green); }
+    .focus-list { display: grid; gap: 17px; margin-bottom: 32px; }
+    .focus-item { display: flex; align-items: center; gap: 13px; color: rgba(255,255,255,.86); font-size: 14px; text-transform: uppercase; letter-spacing: .045em; }
+    .focus-icon { width: 26px; height: 26px; display: grid; place-items: center; color: var(--green); border: 1px solid rgba(105,240,138,.18); border-radius: 9px; background: rgba(105,240,138,.05); }
+    .tech-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .tech { height: 38px; display: grid; place-items: center; border-radius: 11px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.09); color: rgba(255,255,255,.88); font-weight: 800; font-size: 12px; }
+
+    .section { min-height: 78vh; padding: 90px 0; display: grid; align-items: center; position: relative; }
+    .section-head { max-width: 780px; margin-bottom: 34px; position: relative; padding: 26px 30px; border-radius: 28px; isolation: isolate; }
+    .section-head::before { content: ""; position: absolute; inset: -24px -36px; z-index: -1; border-radius: 36px; background: radial-gradient(circle at 30% 40%, rgba(0,0,0,.9), rgba(0,0,0,.72) 46%, rgba(0,0,0,.26) 72%, transparent 100%); backdrop-filter: blur(4px); box-shadow: 0 0 90px rgba(0,0,0,.68); }
+    h2 { margin: 0 0 14px; overflow-wrap: anywhere; font-size: clamp(36px, 4.8vw, 64px); line-height: .96; font-weight: 300; letter-spacing: -.04em; text-transform: uppercase; }
+    .section-head p { color: rgba(255,255,255,.68); font-size: 18px; line-height: 1.7; }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .card { min-height: 250px; padding: 26px; border-radius: 24px; border: 1px solid rgba(255,255,255,.18); background: linear-gradient(180deg, rgba(3,7,5,.92), rgba(3,7,5,.78)); backdrop-filter: blur(12px); box-shadow: 0 26px 90px rgba(0,0,0,.52), 0 0 60px rgba(0,0,0,.4); transition: .25s ease; position: relative; overflow: hidden; }
+    .card::before { content: ""; position: absolute; inset: -40%; opacity: 0; background: radial-gradient(circle at calc(50% + var(--mx) * 80px) calc(50% + var(--my) * 80px), rgba(105,240,138,.16), transparent 35%); transition: opacity .25s ease; }
+    .card:hover { transform: translateY(-8px); border-color: rgba(105,240,138,.34); box-shadow: 0 36px 120px rgba(0,0,0,.36), 0 0 40px rgba(105,240,138,.08); }
+    .card:hover::before { opacity: 1; }
+    .card-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 17px; border: 1px solid rgba(105,240,138,.25); background: rgba(105,240,138,.07); color: var(--green); font-size: 24px; margin-bottom: 20px; position: relative; }
+    .card h3 { margin: 0 0 12px; position: relative; font-size: 22px; letter-spacing: -.02em; }
+    .card p { margin: 0; position: relative; color: rgba(255,255,255,.84); line-height: 1.6; }
+
+    .project { display: grid; grid-template-columns: .95fr 1.05fr; gap: 28px; padding: 26px; border-radius: 32px; border: 1px solid rgba(255,255,255,.18); background: linear-gradient(135deg, rgba(3,7,5,.94), rgba(3,7,5,.8)); backdrop-filter: blur(14px); box-shadow: 0 32px 130px rgba(0,0,0,.62), 0 0 80px rgba(0,0,0,.45); }
+    .mockup { min-height: 470px; border-radius: 24px; border: 1px solid rgba(255,255,255,.13); background: radial-gradient(circle at 28% 24%, rgba(105,240,138,.24), transparent 36%), linear-gradient(135deg, rgba(116,240,223,.12), rgba(105,240,138,.05)), rgba(0,0,0,.38); position: relative; overflow: hidden; transform: perspective(1000px) rotateY(10deg) rotateX(3deg); }
+    .mockup::before { content: attr(data-title); position: absolute; top: 22px; left: 22px; right: 22px; padding: 16px; border-radius: 16px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.9); font-weight: 800; letter-spacing: -.02em; }
+    .mock-content { position: absolute; left: 22px; right: 22px; top: 92px; bottom: 22px; display: grid; gap: 12px; align-content: start; }
+    .mock-card-small { min-height: 88px; border-radius: 18px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.075); padding: 13px 16px; display: grid; gap: 6px; animation: mockFloat 4s ease-in-out infinite; }
+    .mock-card-small:nth-child(2) { animation-delay: -.9s; }
+    .mock-card-small:nth-child(3) { animation-delay: -1.6s; }
+    .mock-card-small strong { color: rgba(255,255,255,.92); font-size: 14px; }
+    .mock-card-small span { color: rgba(255,255,255,.64); font-size: 12px; line-height: 1.35; }
+    .mock-pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
+    .mock-pill { padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(105,240,138,.22); background: rgba(105,240,138,.08); color: rgba(255,255,255,.78); font-size: 11px; }
+    .project-text { padding: 10px; min-width: 0; overflow: hidden; }
+    .project-text p { color: rgba(255,255,255,.86); line-height: 1.7; font-size: 17px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 28px; }
+    .tag { padding: 9px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.1); color: rgba(255,255,255,.9); font-size: 14px; }
+    .timeline { display: grid; gap: 16px; }
+    .step { display: grid; grid-template-columns: 150px 1fr; gap: 20px; padding: 22px; border-radius: 24px; border: 1px solid rgba(255,255,255,.18); background: linear-gradient(180deg, rgba(3,7,5,.92), rgba(3,7,5,.78)); backdrop-filter: blur(12px); }
+    .date { color: var(--green); font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .step h3 { margin: 0 0 8px; }
+    .step p { margin: 0; color: rgba(255,255,255,.84); line-height: 1.6; }
+    .contact { text-align: center; padding: 80px 24px; border-radius: 34px; border: 1px solid rgba(105,240,138,.32); background: radial-gradient(circle at 50% 0%, rgba(105,240,138,.14), transparent 42%), rgba(3,7,5,.9); backdrop-filter: blur(14px); box-shadow: 0 0 90px rgba(105,240,138,.08), 0 30px 120px rgba(0,0,0,.32); }
+    .contact p { max-width: 760px; margin: 0 auto 28px; color: rgba(255,255,255,.9); font-size: 18px; line-height: 1.7; }
+    footer { padding: 38px 0 60px; color: rgba(255,255,255,.44); text-align: center; }
+    .reveal { opacity: 0; transform: translateY(26px); animation: reveal linear both; animation-timeline: view(); animation-range: entry 8% cover 35%; }
+
+    @keyframes reveal { to { opacity: 1; transform: translateY(0); } }
+    @keyframes wheel { 0% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, 18px); opacity: 0; } }
+    @keyframes mockFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+    @media (max-width: 980px) {
+      .side { display: none; }
+      .topbar { left: 18px; right: 18px; justify-content: space-between; }
+      .topbar nav { display: none; }
+      .stage { width: min(100% - 28px, 1100px); margin: 0 auto; }
+      .hero, .project { grid-template-columns: 1fr; }
+      .focus-panel { justify-self: stretch; width: 100%; }
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 820px) {
+      .hero-copy { grid-template-columns:1fr; }
+      .hero-image { justify-self:start; width:140px; height:140px; }
+    }
+
+    @media (max-width: 560px) {
+      .mockup { min-height: 430px; transform: none; }
+      .hero { padding-top: 96px; }
+      .name { white-space: normal; }
+      .button-row { flex-direction: column; }
+      .btn { width: 100%; }
+      .step { grid-template-columns: 1fr; }
+      .tech-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="particleWorld" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <aside class="side" aria-label="Seitennavigation">
+    <a class="side-logo" href="#top">HS</a>
+    <nav class="side-nav">
+      <a class="active" href="#top" title="Start">⌂</a>
+      <a href="#profil" title="Profil">◌</a>
+      <a href="#skills" title="Skills">⌘</a>
+      <a href="#projekt" title="Projekt">▣</a>
+      <a href="#weg" title="Weg">◇</a>
+      <a href="#kontakt" title="Kontakt">✉</a>
+    </nav>
+    <div class="scroll-hint"><div class="mouse"></div><span>Scrollen</span></div>
+  </aside>
+
+  <header class="topbar">
+    <nav>
+      <a href="#profil">Über mich</a>
+      <a href="#skills">Skills</a>
+      <a href="#projekt">Projekte</a>
+      <a href="#weg">Erfahrung</a>
+      <a href="#kontakt">Kontakt</a>
+    </nav>
+    <a class="talk" href="#kontakt">Open to work</a>
+  </header>
+
+  <main class="stage" id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="hero-main">
+          <div class="kicker">Hi, ich bin</div>
+          <h1><span class="name">Hagen Struve</span></h1>
+          <p class="role">AI Product <strong>Builder</strong></p>
+          <p class="subrole">AgrarTech & Software Entwickler</p>
+          <p class="lead">Ich entwickle digitale Produkte, die Landwirtschaft smarter, effizienter und praktischer machen. Mit KI. Mit Code. Mit echter Erfahrung aus der Landwirtschaft.</p>
+          <div style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 30px;color:rgba(255,255,255,.74);font-size:14px;letter-spacing:.04em;">
+            <span>📧 Struve94@web.de</span>
+            <a href="https://www.linkedin.com/in/hagen-struve-99a1611a2/" target="_blank" rel="noopener noreferrer" style="color:rgba(255,255,255,.82);text-decoration:none;">🔗 LinkedIn Profil</a>
+          </div>
+          <div class="button-row">
+            <a class="btn" href="#projekt">Meine Projekte ansehen →</a>
+            <a class="btn secondary" href="#kontakt">Kontakt aufnehmen</a>
+          </div>
+        </div>
+
+        <div class="hero-image">
+          <img src="assets/Foto.jpg" alt="Hagen Struve" />
+        </div>
+      </div>
+
+      <div class="focus-panel">
+        <p class="panel-title">Focus</p>
+        <div class="focus-list">
+          <div class="focus-item"><span class="focus-icon">✳</span><span>AI & Automation</span></div>
+          <div class="focus-item"><span class="focus-icon">☘</span><span>AgrarTech</span></div>
+          <div class="focus-item"><span class="focus-icon">⌁</span><span>Web Development</span></div>
+          <div class="focus-item"><span class="focus-icon">▣</span><span>Produktentwicklung</span></div>
+        </div>
+        <p class="panel-title">Kenntnisse & Fähigkeiten</p>
+        <div class="tech-grid" style="grid-template-columns:repeat(2,1fr);">
+          <span class="tech">KI-Integration</span><span class="tech">SaaS</span><span class="tech">HTML</span><span class="tech">CSS</span><span class="tech">APIs</span><span class="tech">Git</span><span class="tech">Produktdenken</span><span class="tech">Problemlösung</span><span class="tech">AgrarTech</span><span class="tech">Teamarbeit</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="profil" class="section reveal">
+      <div>
+        <div class="section-head"><div class="kicker">Über mich</div><h2>Kein Standard-Junior. Ein produktorientierter Builder.</h2><p>Ich komme aus der Landwirtschaft, habe Frontend-Entwicklung gelernt und mit ChatGPT und Codex ein eigenes SaaS-Projekt aufgebaut. Meine Stärke liegt dort, wo echte Praxis, Produktdenken und KI-gestützte Umsetzung zusammenkommen.</p></div>
+        <div class="cards">
+          <article class="card"><div class="card-icon">🚜</div><h3>Landwirtschaftliche Praxis</h3><p>Ich verstehe Maschinen, Wartung, Dokumentation und die Arbeitsweise landwirtschaftlicher Betriebe aus eigener Erfahrung.</p></article>
+          <article class="card"><div class="card-icon">💻</div><h3>Frontend & SaaS</h3><p>Ich entwickle moderne Oberflächen, Landingpages, Produktlogik und digitale Anwendungen mit klarem Nutzerfokus.</p></article>
+          <article class="card"><div class="card-icon">🤖</div><h3>KI-gestützte Entwicklung</h3><p>Ich arbeite mit ChatGPT und Codex, strukturiere Aufgaben sauber und bringe Ideen iterativ in funktionierende Software.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="skills" class="section reveal">
+      <div>
+        <div class="section-head"><div class="kicker">Skills</div><h2>Wofür ich besonders gut passe</h2><p>Remote-Rollen im Bereich AI Product Building, AI Automation, AgrarTech, Junior Fullstack, SaaS oder technische Produktentwicklung passen besonders gut zu meinem Profil.</p></div>
+        <div class="cards">
+          <article class="card"><div class="card-icon">⚡</div><h3>AI Product Builder</h3><p>MVPs, Prototypen, Produktideen und schnelle Umsetzung mit modernen KI-Workflows.</p></article>
+          <article class="card"><div class="card-icon">🧩</div><h3>UX & Produktdenken</h3><p>Nutzerführung, Conversion, klare Kommunikation und Produktlogik mit Blick auf echte Anwender.</p></article>
+          <article class="card"><div class="card-icon">🛠</div><h3>Pragmatische Umsetzung</h3><p>Ich zerlege Aufgaben, arbeite mich durch Probleme und bringe Projekte Schritt für Schritt nach vorne.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="projekt" class="section reveal">
+      <div>
+        <div class="section-head"><div class="kicker">Projekte</div><h2>Produkte, Tools & reale Anwendungen</h2><p>Ich arbeite produktorientiert und entwickle Anwendungen für reale Probleme, Prozesse und Arbeitsabläufe.</p></div>
+
+        <div class="project" style="margin-bottom:34px;">
+          <div class="mockup" data-title="MaschinenLog">
+            <div class="mock-content"><div class="mock-card-small"><strong>John Deere 6155R</strong><span>Wartung dokumentiert · Ölwechsel fällig in 18 Betriebsstunden</span><div class="mock-pill-row"><span class="mock-pill">Maschine</span><span class="mock-pill">Service</span></div></div><div class="mock-card-small"><strong>Krone Comprima</strong><span>Ersatzteile, Dokumente und Historie zentral gespeichert</span><div class="mock-pill-row"><span class="mock-pill">Dokumentation</span><span class="mock-pill">Historie</span></div></div><div class="mock-card-small"><strong>Marktplatz</strong><span>Inserate für Verkauf, Vermietung und Lohnarbeit geplant</span><div class="mock-pill-row"><span class="mock-pill">SaaS</span><span class="mock-pill">AgrarTech</span></div></div></div>
+          </div>
+          <div class="project-text"><div class="kicker">Portfolio-Projekt</div><h2>MaschinenLog</h2><p>MaschinenLog ist mein eigenes SaaS-Projekt für Maschinenverwaltung, Wartungsdokumentation und digitale Organisation rund um Landtechnik.</p><p>Das Projekt zeigt meine eigentliche Stärke: Ich verstehe ein reales Branchenproblem, übersetze es in Produktlogik und setze es mit KI-gestützter Entwicklung schrittweise um.</p><div class="tags"><span class="tag">SaaS</span><span class="tag">AgrarTech</span><span class="tag">KI-Workflow</span><span class="tag">Frontend</span><span class="tag">Produktdenken</span><span class="tag">maschinenlog.de</span></div><div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;"><a class="btn" href="https://maschinenlog.de/" target="_blank" rel="noopener">MaschinenLog öffnen →</a><span style="color:rgba(255,255,255,.72);font-size:14px;letter-spacing:.04em;">🌐 maschinenlog.de</span></div></div>
+        </div>
+
+        <div class="project" style="margin-bottom:34px;">
+          <div class="mockup" data-title="Rechnungsprogramm">
+            <div class="mock-content"><div class="mock-card-small"><strong>PDF & Druck</strong><span>Rechnungen direkt exportieren, drucken und lokal speichern</span><div class="mock-pill-row"><span class="mock-pill">PDF</span><span class="mock-pill">Export</span></div></div><div class="mock-card-small"><strong>Kundenspeicher</strong><span>Kundeninformationen und Firmendaten zentral verwalten</span><div class="mock-pill-row"><span class="mock-pill">CRM</span><span class="mock-pill">Verwaltung</span></div></div><div class="mock-card-small"><strong>Rechnungsvorschau</strong><span>Live-Vorschau mit automatischer Berechnung und modernem Workflow</span><div class="mock-pill-row"><span class="mock-pill">Workflow</span><span class="mock-pill">Automatisierung</span></div></div></div>
+          </div>
+          <div class="project-text"><div class="kicker">Eigenes Projekt</div><h2>Rechnungs- & Workflow-App</h2><p>Eigenentwickelte Rechnungs- und Verwaltungsanwendung zur Organisation persönlicher Geschäftsprozesse.</p><p>Die Anwendung enthält Kundenverwaltung, Rechnungslogik, PDF-Erstellung, Speicherfunktionen und eine moderne Benutzeroberfläche.</p><div class="tags"><span class="tag">Rechnungen</span><span class="tag">Automatisierung</span><span class="tag">Workflow</span><span class="tag">Produktentwicklung</span><span class="tag">KI-Workflow</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="weg" class="section reveal">
+      <div><div class="section-head"><div class="kicker">Erfahrung</div><h2>Vom Acker zur Anwendung</h2></div><div class="timeline"><div class="step"><div class="date">Basis</div><div><h3>Gelernter Landwirt</h3><p>Praxiswissen über Maschinen, Betriebe, Wartung und reale Prozesse in der Landwirtschaft.</p></div></div><div class="step"><div class="date">Bootcamp</div><div><h3>Frontend-Entwicklung</h3><p>HTML, CSS, JavaScript, UI-Aufbau und Grundlagen moderner Webentwicklung.</p></div></div><div class="step"><div class="date">Heute</div><div><h3>MaschinenLog mit KI entwickelt</h3><p>Eigenes SaaS-Projekt mit Maschinenverwaltung, Service-Dokumentation, Rollen, Marketplace-Ideen und Billing-Konzepten.</p></div></div></div></div>
+    </section>
+
+    <section id="kontakt" class="section reveal">
+      <div class="contact"><div class="kicker">Kontakt</div><h2>Ich suche einen Remote-Job, in dem ich mit KI echte Produkte bauen kann.</h2><p>Spannend sind Rollen als AI Product Builder, AI Automation Specialist, Junior Fullstack Developer, AgrarTech-Mitarbeiter oder technischer Produktentwickler.</p><div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;"><a class="btn" href="mailto:Struve94@web.de">E-Mail schreiben</a><a class="btn secondary" href="https://www.linkedin.com/in/hagen-struve-99a1611a2/" target="_blank" rel="noopener noreferrer">LinkedIn Profil ↗</a><a class="btn secondary" href="https://maschinenlog.de/" target="_blank" rel="noopener">MaschinenLog ansehen ↗</a></div><p style="margin-top:22px;font-size:15px;color:rgba(255,255,255,.72);">Direktkontakt: Struve94@web.de</p></div>
+    </section>
+
+    <footer>© 2026 Hagen Struve · hagen-struve.de</footer>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('particleWorld');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    const root = document.documentElement;
+    const pointer = { x: 0, y: 0, tx: 0, ty: 0, nx: 0, ny: 0 };
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let width = 0, height = 0, dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    let particles = [], ring = [], sampled = [], projected = [], resizeTimer = null, running = true, rafId = null;
+    function resize(){width=window.innerWidth;height=window.innerHeight;dpr=Math.min(window.devicePixelRatio||1,width<700?1.25:1.5);canvas.width=Math.floor(width*dpr);canvas.height=Math.floor(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);buildParticles();}
+    function buildParticles(){particles=[];ring=[];sampled=[];projected=[];const count=prefersReducedMotion?420:(width<700?650:1500);const centerX=width*.56,centerY=height*.49,scale=Math.min(width,height)*.48;for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,r=Math.pow(Math.random(),.62),lobes=1+Math.sin(a*3.1)*.18+Math.cos(a*5.4)*.14,x=Math.cos(a)*r*scale*1.18*lobes,y=Math.sin(a)*r*scale*.82*(1+Math.cos(a*2.2)*.12),ridge=Math.sin(x*.014)*Math.cos(y*.011)*68,z=ridge+(Math.random()-.5)*180,clusterBoost=Math.random();particles.push({bx:x,by:y,bz:z,x:0,y:0,z,perspective:1,size:clusterBoost>.88?2.8+Math.random()*4.5:.9+Math.random()*2.1,phase:Math.random()*Math.PI*2,speed:.35+Math.random()*.7,alpha:.22+Math.random()*.68,hue:Math.random()>.72?170:132,cx:centerX,cy:centerY});}const ringCount=prefersReducedMotion?120:(width<700?160:260);for(let i=0;i<ringCount;i++){const a=(i/ringCount)*Math.PI*2;ring.push({a,radius:scale*1.55*(1+Math.sin(i*.31)*.018),phase:Math.random()*Math.PI*2,size:1.2+Math.random()*1.4});}}
+    function projectParticle(p,t){const rotY=pointer.nx*.42+Math.sin(t*.00012)*.18,rotX=pointer.ny*-.28+Math.cos(t*.0001)*.08,pulse=prefersReducedMotion?0:Math.sin(t*.001*p.speed+p.phase)*12;const x=p.bx,y=p.by+(prefersReducedMotion?0:Math.sin(t*.0008+p.phase)*7),z=p.bz+pulse;const cosy=Math.cos(rotY),siny=Math.sin(rotY),cosx=Math.cos(rotX),sinx=Math.sin(rotX);const x1=x*cosy-z*siny,z1=x*siny+z*cosy,y1=y*cosx-z1*sinx,z2=y*sinx+z1*cosx;const depth=760,perspective=depth/(depth+z2);p.x=p.cx+x1*perspective+pointer.nx*26;p.y=p.cy+y1*perspective+pointer.ny*18;p.z=z2;p.perspective=perspective;return p;}
+    function drawParticle(p){const s=p.size*p.perspective,glow=p.size>3.2,textSafeZone=p.x<width*.58&&p.y>height*.18&&p.y<height*.78,safeFade=textSafeZone?.42:1;ctx.globalAlpha=Math.min(1,(p.alpha+.25)*Math.min(1.35,p.perspective))*safeFade;ctx.fillStyle=p.hue===170?'rgba(116,240,223,.9)':'rgba(235,255,238,.9)';ctx.beginPath();ctx.arc(p.x,p.y,s,0,Math.PI*2);ctx.fill();if(glow){ctx.globalAlpha=textSafeZone?.035:.12;ctx.fillStyle=p.hue===170?'rgba(116,240,223,1)':'rgba(105,240,138,1)';ctx.beginPath();ctx.arc(p.x,p.y,s*4.5,0,Math.PI*2);ctx.fill();}}
+    function drawConnections(list){ctx.lineWidth=.7;for(let i=0;i<list.length;i++){const a=list[i],max=Math.min(list.length,i+16);for(let j=i+1;j<max;j++){const b=list[j],dx=a.x-b.x,dy=a.y-b.y,distSq=dx*dx+dy*dy;if(distSq<8464){const dist=Math.sqrt(distSq),inSafeZone=a.x<width*.58&&a.y>height*.18&&a.y<height*.78;ctx.globalAlpha=(1-dist/92)*(inSafeZone?.08:.28);ctx.strokeStyle='rgba(170,255,210,1)';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}}}
+    function drawRing(t){const cx=width*.56+pointer.nx*18,cy=height*.49+pointer.ny*10;ctx.globalAlpha=.62;ctx.fillStyle='rgba(232,255,238,.82)';for(const dot of ring){const wave=prefersReducedMotion?0:Math.sin(t*.001+dot.phase)*7,x=cx+Math.cos(dot.a+t*.00005)*(dot.radius*1.15+wave),y=cy+Math.sin(dot.a+t*.00005)*(dot.radius*.92+wave);ctx.beginPath();ctx.arc(x,y,dot.size,0,Math.PI*2);ctx.fill();}}
+    function animate(t){if(!running)return;pointer.x+=(pointer.tx-pointer.x)*.08;pointer.y+=(pointer.ty-pointer.y)*.08;pointer.nx=(pointer.x/width-.5)*2;pointer.ny=(pointer.y/height-.5)*2;root.style.setProperty('--mx',pointer.nx.toFixed(3));root.style.setProperty('--my',pointer.ny.toFixed(3));ctx.clearRect(0,0,width,height);const gradient=ctx.createRadialGradient(width*.56,height*.47,0,width*.56,height*.47,Math.min(width,height)*.72);gradient.addColorStop(0,'rgba(105,240,138,.15)');gradient.addColorStop(.42,'rgba(20,80,52,.04)');gradient.addColorStop(1,'rgba(0,0,0,0)');ctx.globalAlpha=1;ctx.fillStyle=gradient;ctx.fillRect(0,0,width,height);drawRing(t);sampled.length=0;projected.length=0;const sampleEvery=width<700?10:9;for(let i=0;i<particles.length;i++){const p=projectParticle(particles[i],t);projected.push(p);if(i%sampleEvery===0)sampled.push(p);}drawConnections(sampled);for(let i=0;i<projected.length;i++)drawParticle(projected[i]);ctx.globalAlpha=.32;ctx.strokeStyle='rgba(105,240,138,1)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(width*.56+pointer.nx*22,height*.49+pointer.ny*12,Math.min(width,height)*.58,Math.min(width,height)*.48,Math.sin(t*.00008)*.04,0,Math.PI*2);ctx.stroke();rafId=requestAnimationFrame(animate);}
+    window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(resize,160);},{passive:true});
+    window.addEventListener('pointermove',(event)=>{pointer.tx=event.clientX;pointer.ty=event.clientY;},{passive:true});
+    document.addEventListener('visibilitychange',()=>{running=!document.hidden;if(running&&!rafId)rafId=requestAnimationFrame(animate);if(!running&&rafId){cancelAnimationFrame(rafId);rafId=null;}});
+    pointer.tx=window.innerWidth*.58;pointer.ty=window.innerHeight*.45;pointer.x=pointer.tx;pointer.y=pointer.ty;resize();rafId=requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
