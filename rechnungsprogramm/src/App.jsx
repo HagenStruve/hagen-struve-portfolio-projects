@@ -1058,9 +1058,9 @@ export default function Rechnungsprogramm() {
   };
 
   const renderInvoicePreview = () => (
-    <Card className="overflow-hidden rounded-2xl shadow-sm print:border-0 print:shadow-none">
+    <Card className="w-full max-w-full overflow-hidden rounded-2xl shadow-sm print:border-0 print:shadow-none">
       <CardHeader className="border-b print:border-b"><CardTitle className="text-xl sm:text-2xl">Rechnungsvorschau</CardTitle></CardHeader>
-      <CardContent className="p-4 sm:p-6 md:p-8">
+      <CardContent className="min-w-0 p-4 sm:p-5 md:p-6">
         <div className="space-y-8 text-sm">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
@@ -1084,30 +1084,30 @@ export default function Rechnungsprogramm() {
             <p className="break-words text-slate-600">{invoice.customerEmail || "Keine E-Mail-Adresse"}</p>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border">
-            <table className="w-full min-w-[680px] text-left">
+          <div className="overflow-hidden rounded-2xl border">
+            <table className="w-full table-fixed text-left text-[11px] sm:text-xs">
               <thead className="bg-slate-100">
                 <tr>
-                  <th className="px-4 py-3">Beschreibung</th>
-                  <th className="px-4 py-3">Menge</th>
-                  <th className="px-4 py-3">Einheit</th>
-                  <th className="px-4 py-3">Einzelpreis</th>
-                  <th className="px-4 py-3">Diesel</th>
-                  <th className="px-4 py-3 text-right">Betrag</th>
+                  <th className="w-[30%] px-2 py-2">Beschreibung</th>
+                  <th className="w-[11%] px-2 py-2">Menge</th>
+                  <th className="w-[10%] px-2 py-2">Einheit</th>
+                  <th className="w-[18%] px-2 py-2">Einzelpreis</th>
+                  <th className="w-[13%] px-2 py-2">Diesel</th>
+                  <th className="w-[18%] px-2 py-2 text-right">Betrag</th>
                 </tr>
               </thead>
               <tbody>
                 {invoice.items.map((item) => (
                   <tr key={item.id} className="border-t align-top">
-                    <td className="px-4 py-3 break-words">{item.description || "-"}</td>
-                    <td className="px-4 py-3">{item.quantity ?? item.hours}</td>
-                    <td className="px-4 py-3">{item.unit || ""}</td>
-                    <td className="px-4 py-3">
+                    <td className="break-words px-2 py-2">{item.description || "-"}</td>
+                    <td className="break-words px-2 py-2">{item.quantity ?? item.hours}</td>
+                    <td className="break-words px-2 py-2">{item.unit || ""}</td>
+                    <td className="break-words px-2 py-2">
                       {currency(item.unitPrice)}
-                      <span className="block text-xs text-slate-500">{normalizePriceMode(item.priceMode) === "gross" ? "brutto vereinbart" : "netto"}</span>
+                      <span className="block break-words text-[10px] leading-tight text-slate-500">{normalizePriceMode(item.priceMode) === "gross" ? "brutto vereinbart" : "netto"}</span>
                     </td>
-                    <td className="px-4 py-3">{getLineFuel(item) > 0 ? formatFuel(getLineFuel(item)) : "-"}</td>
-                    <td className="px-4 py-3 text-right">{currency(getLineNetTotal(item, invoice.taxRate))}</td>
+                    <td className="break-words px-2 py-2">{getLineFuel(item) > 0 ? formatFuel(getLineFuel(item)) : "-"}</td>
+                    <td className="break-words px-2 py-2 text-right">{currency(getLineNetTotal(item, invoice.taxRate))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1568,6 +1568,10 @@ export default function Rechnungsprogramm() {
         </div>
 
         <div className="hidden min-w-0 xl:sticky xl:top-6 xl:block xl:max-h-[calc(100dvh-48px)] xl:self-start xl:overflow-y-auto">
+          {renderInvoicePreview()}
+        </div>
+
+        <div className="hidden">
           <Card className="overflow-hidden rounded-2xl shadow-sm print:border-0 print:shadow-none">
             <CardHeader className="border-b print:border-b"><CardTitle className="text-xl sm:text-2xl">Rechnungsvorschau</CardTitle></CardHeader>
             <CardContent className="p-4 sm:p-6 md:p-8">
