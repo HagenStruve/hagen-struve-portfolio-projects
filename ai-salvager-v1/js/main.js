@@ -5,6 +5,9 @@ import { Player } from "./player.js";
 import { Fragment, Asteroid } from "./entities.js";
 import { circleCollision, outsideBounds } from "./collision.js";
 import { ParticleSystem } from "./particles.js";
+import { UpgradePart, applyRandomUpgrade } from "./upgrades.js";
+import { createPlayerShot } from "./projectiles.js";
+import { Drone } from "./enemies.js";
 
 const canvas = document.querySelector("#gameCanvas");
 const startScreen = document.querySelector("#startScreen");
@@ -19,10 +22,13 @@ const howToPanel = document.querySelector("#howToPanel");
 const energyFill = document.querySelector("#energyFill");
 const scoreText = document.querySelector("#scoreText");
 const statusText = document.querySelector("#statusText");
+const abilityText = document.querySelector("#abilityText");
+const shieldText = document.querySelector("#shieldText");
 const finalScore = document.querySelector("#finalScore");
 const finalTime = document.querySelector("#finalTime");
 const collectFlash = document.querySelector("#collectFlash");
 const damageFlash = document.querySelector("#damageFlash");
+const fireButton = document.querySelector("#fireButton");
 const energyPanel = energyFill.closest(".hud__panel");
 const scorePanel = scoreText.closest(".hud__panel");
 
@@ -38,9 +44,11 @@ const game = {
   score: 0,
   displayScore: 0,
   elapsed: 0,
-  survivalTimer: 0,
   fragmentTimer: 0,
+  partTimer: 7,
   asteroidTimer: 1.2,
+  enemyTimer: 2.5,
+  weaponTimer: 0,
   difficulty: {
     level: 1,
     spawnInterval: 1.65,
@@ -49,7 +57,11 @@ const game = {
   },
   shake: 0,
   fragments: [],
+  parts: [],
   asteroids: [],
+  enemies: [],
+  playerProjectiles: [],
+  enemyProjectiles: [],
   statusLock: 0,
   status: "SCANNING",
 };
@@ -68,18 +80,25 @@ function startGame() {
   player.y = renderer.height * 0.62;
   player.vx = 0;
   player.vy = 0;
+  player.resetUpgrades();
   player.energy = 100;
   player.invulnerable = 0;
   game.score = 0;
   game.displayScore = 0;
   game.elapsed = 0;
-  game.survivalTimer = 0;
   game.fragmentTimer = 0;
+  game.partTimer = 5.5;
   game.asteroidTimer = 1;
+  game.enemyTimer = 2.5;
+  game.weaponTimer = 0;
   game.difficulty = getDifficulty();
   game.shake = 0;
   game.fragments = [];
+  game.parts = [];
   game.asteroids = [];
+  game.enemies = [];
+  game.playerProjectiles = [];
+  game.enemyProjectiles = [];
   game.statusLock = 0;
   game.status = "SCANNING";
   particles.clear();
@@ -97,6 +116,10 @@ startButton.addEventListener("click", startGame);
 resumeButton.addEventListener("click", () => setState("playing"));
 restartButton.addEventListener("click", startGame);
 howToButton.addEventListener("click", () => howToPanel.classList.toggle("howto--open"));
+fireButton.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+  input.queueFire();
+});
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") togglePause();
@@ -113,9 +136,20 @@ function spawnFragment() {
   game.fragments.push(new Fragment(renderer, game.asteroids));
 }
 
+function spawnPart() {
+  if (game.parts.length >= 2) return;
+  game.parts.push(new UpgradePart(renderer));
+}
+
 function spawnAsteroid() {
   if (game.asteroids.length >= game.difficulty.maxAsteroids) return;
   game.asteroids.push(new Asteroid(renderer, game.difficulty.asteroidSpeedMultiplier));
+}
+
+function spawnEnemy() {
+  const settings = getCombatDifficulty();
+  if (settings.maxEnemies === 0 || game.enemies.length >= settings.maxEnemies) return;
+  game.enemies.push(new Drone(renderer, settings));
 }
 
 function addScore(amount) {
@@ -161,6 +195,27 @@ function getDifficulty() {
   };
 }
 
+function getCombatDifficulty() {
+  const score = game.score;
+  if (score < 1000) {
+    return { scoreLevel: score, maxEnemies: 0, spawnInterval: 99, fireInterval: 2.5, aggression: 0.45, projectileSpeed: 230 };
+  }
+
+  if (score < 2000) {
+    return { scoreLevel: score, maxEnemies: 1, spawnInterval: 5.8, fireInterval: 2.45, aggression: 0.48, projectileSpeed: 240 };
+  }
+
+  if (score < 3500) {
+    return { scoreLevel: score, maxEnemies: 1, spawnInterval: 4.6, fireInterval: 1.9, aggression: 0.58, projectileSpeed: 285 };
+  }
+
+  if (score < 5000) {
+    return { scoreLevel: score, maxEnemies: 2, spawnInterval: 4.2, fireInterval: 1.55, aggression: 0.68, projectileSpeed: 330 };
+  }
+
+  return { scoreLevel: score, maxEnemies: 3, spawnInterval: 3.6, fireInterval: 1.2, aggression: 0.82, projectileSpeed: 390 };
+}
+
 function update(dt) {
   background.resize(renderer.width, renderer.height);
   background.update(dt);
@@ -174,11 +229,19 @@ function update(dt) {
     player.update(dt, input, renderer);
     particles.emitThruster(player, dt);
     applySpeedFeel(dt);
+    game.weaponTimer = Math.max(0, game.weaponTimer - dt);
+    handleShooting();
 
     game.fragmentTimer -= dt;
     if (game.fragmentTimer <= 0) {
       spawnFragment();
       game.fragmentTimer = randomRange(1.05, 1.85) - Math.min(0.38, game.elapsed * 0.004);
+    }
+
+    game.partTimer -= dt;
+    if (game.partTimer <= 0) {
+      spawnPart();
+      game.partTimer = randomRange(9, 14);
     }
 
     game.asteroidTimer -= dt;
@@ -187,22 +250,54 @@ function update(dt) {
       game.asteroidTimer = randomRange(game.difficulty.spawnInterval * 0.72, game.difficulty.spawnInterval * 1.22);
     }
 
+    const combat = getCombatDifficulty();
+    game.enemyTimer -= dt;
+    if (game.enemyTimer <= 0) {
+      if (combat.maxEnemies > 0) {
+        spawnEnemy();
+        game.enemyTimer = randomRange(combat.spawnInterval * 0.75, combat.spawnInterval * 1.25);
+      } else {
+        game.enemyTimer = 0.8;
+      }
+    }
+
     for (const fragment of game.fragments) fragment.update(dt, renderer);
+    for (const part of game.parts) part.update(dt, renderer);
     for (const asteroid of game.asteroids) asteroid.update(dt);
+    updateProjectiles(dt);
+    updateEnemies(dt, combat);
 
     handleCollisions();
 
-    game.survivalTimer += dt;
-    if (game.survivalTimer >= 5) {
-      game.survivalTimer = 0;
-      addScore(15);
-    }
-
     game.asteroids = game.asteroids.filter((asteroid) => !outsideBounds(asteroid, renderer));
+    game.enemies = game.enemies.filter((enemy) => !outsideBounds(enemy, renderer, 160));
+    game.playerProjectiles = game.playerProjectiles.filter((projectile) => projectile.life > 0 && !outsideBounds(projectile, renderer, 80));
+    game.enemyProjectiles = game.enemyProjectiles.filter((projectile) => projectile.life > 0 && !outsideBounds(projectile, renderer, 80));
     game.displayScore += (game.score - game.displayScore) * Math.min(1, dt * 8);
     updateStatus();
 
     if (player.energy <= 0) endGame();
+  }
+}
+
+function handleShooting() {
+  if (!input.consumeFire() || !player.weaponUnlocked || game.weaponTimer > 0) return;
+
+  game.playerProjectiles.push(createPlayerShot(player));
+  game.weaponTimer = player.fireRate;
+  particles.emitBurst(player.x, player.y - 18, "rgba(68,247,255,", 8, 120);
+  game.shake = Math.max(game.shake, 0.7);
+}
+
+function updateProjectiles(dt) {
+  for (const projectile of game.playerProjectiles) projectile.update(dt);
+  for (const projectile of game.enemyProjectiles) projectile.update(dt);
+}
+
+function updateEnemies(dt, settings) {
+  for (const enemy of game.enemies) {
+    const shot = enemy.update(dt, player, settings);
+    if (shot) game.enemyProjectiles.push(shot);
   }
 }
 
@@ -237,6 +332,20 @@ function handleCollisions() {
     return false;
   });
 
+  game.parts = game.parts.filter((part) => {
+    if (!circleCollision(player, part)) return true;
+
+    const label = applyRandomUpgrade(player);
+    particles.emitBurst(part.x, part.y, "rgba(255,189,86,", 30, 260);
+    triggerFlash(collectFlash);
+    flashPanel(energyPanel);
+    setMomentaryStatus(label, 1.25);
+    return false;
+  });
+
+  resolvePlayerShots();
+  resolveEnemyDamage();
+
   game.asteroids = game.asteroids.filter((asteroid) => {
     if (!circleCollision(player, asteroid)) return true;
     if (!player.takeDamage(asteroid.damage)) return true;
@@ -245,7 +354,63 @@ function handleCollisions() {
     particles.emitBurst(asteroid.x, asteroid.y, "rgba(255,79,216,", 32, 290);
     triggerFlash(damageFlash);
     flashPanel(energyPanel);
-    setMomentaryStatus(player.energy <= 24 ? "CRITICAL" : "WARNING", 1);
+    setMomentaryStatus(player.energy <= 24 ? "CRITICAL" : "DANGER", 1);
+    return false;
+  });
+
+  game.enemies = game.enemies.filter((enemy) => {
+    if (!circleCollision(player, enemy)) return true;
+    if (!player.takeDamage(18)) return true;
+
+    particles.emitBurst(enemy.x, enemy.y, "rgba(255,79,216,", 26, 250);
+    game.shake = Math.max(game.shake, 10);
+    setMomentaryStatus(player.energy <= 24 ? "CRITICAL" : "DANGER", 1);
+    return false;
+  });
+}
+
+function resolvePlayerShots() {
+  game.playerProjectiles = game.playerProjectiles.filter((projectile) => {
+    for (let i = game.asteroids.length - 1; i >= 0; i--) {
+      const asteroid = game.asteroids[i];
+      if (!circleCollision(projectile, asteroid)) continue;
+
+      game.asteroids.splice(i, 1);
+      addScore(Math.round(35 + asteroid.radius));
+      particles.emitBurst(asteroid.x, asteroid.y, "rgba(255,189,86,", 24, 260);
+      game.shake = Math.max(game.shake, 3);
+      return false;
+    }
+
+    for (let i = game.enemies.length - 1; i >= 0; i--) {
+      const enemy = game.enemies[i];
+      if (!circleCollision(projectile, enemy)) continue;
+
+      enemy.health -= projectile.damage;
+      particles.emitBurst(projectile.x, projectile.y, "rgba(68,247,255,", 10, 150);
+      if (enemy.health <= 0) {
+        game.enemies.splice(i, 1);
+        addScore(250);
+        particles.emitBurst(enemy.x, enemy.y, "rgba(255,79,216,", 34, 290);
+        game.shake = Math.max(game.shake, 5);
+      }
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function resolveEnemyDamage() {
+  game.enemyProjectiles = game.enemyProjectiles.filter((projectile) => {
+    if (!circleCollision(player, projectile)) return true;
+    if (!player.takeDamage(projectile.damage)) return false;
+
+    particles.emitBurst(projectile.x, projectile.y, "rgba(255,79,216,", 18, 210);
+    triggerFlash(damageFlash);
+    flashPanel(energyPanel);
+    game.shake = Math.max(game.shake, 6);
+    setMomentaryStatus(player.energy <= 24 ? "CRITICAL" : "DANGER", 1);
     return false;
   });
 }
@@ -257,9 +422,11 @@ function updateStatus() {
     const distance = Math.hypot(asteroid.x - player.x, asteroid.y - player.y);
     return distance < player.radius + asteroid.radius + 72;
   });
+  const enemyAlert = game.score >= 1000 && (game.enemies.length > 0 || getCombatDifficulty().maxEnemies > 0);
 
   if (player.energy <= 22) game.status = "CRITICAL";
   else if (dangerClose) game.status = "DANGER";
+  else if (enemyAlert) game.status = "DRONE SIGNAL";
   else if (Math.hypot(player.vx, player.vy) > 560) game.status = "HIGH VELOCITY";
   else if (player.energy <= 42 || game.asteroids.length >= game.difficulty.maxAsteroids - 1) game.status = "DANGER";
   else if (game.fragments.some((fragment) => Math.hypot(fragment.x - player.x, fragment.y - player.y) < 120)) game.status = "SALVAGING";
@@ -286,7 +453,11 @@ function draw() {
 
   if (game.state !== "menu") {
     for (const fragment of game.fragments) fragment.draw(ctx);
+    for (const part of game.parts) part.draw(ctx);
     for (const asteroid of game.asteroids) asteroid.draw(ctx);
+    for (const enemy of game.enemies) enemy.draw(ctx);
+    for (const projectile of game.playerProjectiles) projectile.draw(ctx);
+    for (const projectile of game.enemyProjectiles) projectile.draw(ctx);
     particles.draw(ctx);
     player.draw(ctx);
   } else {
@@ -295,10 +466,13 @@ function draw() {
 
   ctx.restore();
 
-  energyFill.style.width = `${player.energy}%`;
+  energyFill.style.width = `${(player.energy / player.maxEnergy) * 100}%`;
   energyFill.classList.toggle("energy-low", game.state === "playing" && player.energy <= 28);
   scoreText.textContent = Math.floor(game.displayScore).toString().padStart(4, "0");
   statusText.textContent = game.status;
+  abilityText.textContent = player.weaponUnlocked ? `WEAPON / SPD ${player.speedLevel}` : `SPD ${player.speedLevel}`;
+  shieldText.textContent = player.shield > 0 ? `${Math.ceil(player.shield)}S` : "OFF";
+  fireButton.classList.toggle("fire-button--active", game.state === "playing" && player.weaponUnlocked);
 }
 
 function drawAmbientShip(ctx) {

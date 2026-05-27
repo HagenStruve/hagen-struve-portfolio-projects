@@ -39,6 +39,7 @@
           <strong>Steuerung:</strong>
           <span>WASD / Pfeiltasten bewegen</span>
           <span>Maus gedrückt halten oder Touch ziehen</span>
+          <span>Leertaste feuert nach Weapon-Upgrade</span>
           <span>ESC pausiert</span>
         </div>
       </div>
@@ -79,7 +80,17 @@
         <span class="hud__label">STATUS</span>
         <strong id="statusText">SCAN READY</strong>
       </div>
+      <div class="hud__panel hide-small">
+        <span class="hud__label">SYSTEM</span>
+        <strong id="abilityText">NO WEAPON</strong>
+      </div>
+      <div class="hud__panel hide-small">
+        <span class="hud__label">SHIELD</span>
+        <strong id="shieldText">OFF</strong>
+      </div>
     </div>
+
+    <button id="fireButton" class="fire-button" aria-label="Feuern">FIRE</button>
   </div>
 
   <script type="module" src="./js/main.js"></script>

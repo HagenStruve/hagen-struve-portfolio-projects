@@ -11,13 +11,24 @@ export class Player {
     this.energy = 100;
     this.enginePulse = 0;
     this.invulnerable = 0;
+    this.resetUpgrades();
+  }
+
+  resetUpgrades() {
+    this.maxEnergy = 100;
+    this.weaponUnlocked = false;
+    this.speedLevel = 1;
+    this.speedMultiplier = 1;
+    this.projectileSpeed = 720;
+    this.fireRate = 0.34;
+    this.shield = 0;
   }
 
   update(dt, input, bounds) {
     const axis = input.axis();
     const keyboardActive = Math.abs(axis.x) + Math.abs(axis.y) > 0;
-    const acceleration = 1420;
-    const maxSpeed = 720;
+    const acceleration = 1420 * this.speedMultiplier;
+    const maxSpeed = 720 * this.speedMultiplier;
     const damping = Math.pow(0.0028, dt);
 
     this.vx += axis.x * acceleration * dt;
@@ -54,18 +65,24 @@ export class Player {
     this.rotation += (targetRotation - this.rotation) * Math.min(1, dt * 13);
     this.enginePulse += dt * (18 + speed * 0.018);
     this.invulnerable = Math.max(0, this.invulnerable - dt);
+    this.shield = Math.max(0, this.shield - dt);
 
     const drain = (keyboardActive || input.pointer.active) ? 2.25 : -2.4;
-    this.energy = clamp(this.energy - drain * dt, 0, 100);
+    this.energy = clamp(this.energy - drain * dt, 0, this.maxEnergy);
   }
 
   heal(amount) {
-    this.energy = clamp(this.energy + amount, 0, 100);
+    this.energy = clamp(this.energy + amount, 0, this.maxEnergy);
   }
 
   takeDamage(amount) {
     if (this.invulnerable > 0) return false;
-    this.energy = clamp(this.energy - amount, 0, 100);
+    if (this.shield > 0) {
+      this.shield = Math.max(0, this.shield - 1.5);
+      this.invulnerable = 0.28;
+      return true;
+    }
+    this.energy = clamp(this.energy - amount, 0, this.maxEnergy);
     this.invulnerable = 0.72;
     return true;
   }
@@ -78,6 +95,7 @@ export class Player {
 
     this.drawEngine(ctx);
     this.drawShip(ctx);
+    if (this.shield > 0) this.drawShield(ctx);
 
     ctx.restore();
   }
@@ -134,6 +152,19 @@ export class Player {
     ctx.arc(0, -4, 6.2, 0, Math.PI * 2);
     ctx.fill();
 
+    ctx.restore();
+  }
+
+  drawShield(ctx) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = "rgba(68,247,255,0.42)";
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "rgba(68,247,255,0.85)";
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.arc(0, 0, 38 + Math.sin(this.enginePulse) * 2, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.restore();
   }
 }

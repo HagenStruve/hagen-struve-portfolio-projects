@@ -1,6 +1,7 @@
 export class Input {
   constructor(canvas) {
     this.keys = new Set();
+    this.fireQueued = false;
     this.pointer = {
       active: false,
       pressed: false,
@@ -10,6 +11,10 @@ export class Input {
 
     window.addEventListener("keydown", (event) => {
       this.keys.add(event.key.toLowerCase());
+      if (event.code === "Space") {
+        event.preventDefault();
+        this.fireQueued = true;
+      }
     });
 
     window.addEventListener("keyup", (event) => {
@@ -57,5 +62,15 @@ export class Input {
 
     const length = Math.hypot(x, y) || 1;
     return { x: x / length, y: y / length };
+  }
+
+  queueFire() {
+    this.fireQueued = true;
+  }
+
+  consumeFire() {
+    const fire = this.fireQueued || this.keys.has(" ");
+    this.fireQueued = false;
+    return fire;
   }
 }

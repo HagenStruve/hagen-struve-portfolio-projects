@@ -77,7 +77,7 @@ button {
 }
 
 .screen--active {
-  pointer-events: auto;
+  pointer-events: none;
   opacity: 1;
   transform: scale(1);
 }
@@ -244,7 +244,7 @@ h2 {
 }
 
 .howto--open {
-  max-height: 140px;
+  max-height: 170px;
   margin-top: 22px;
 }
 
@@ -333,6 +333,36 @@ h2 {
   font-size: 24px;
 }
 
+.fire-button {
+  pointer-events: auto;
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  display: none;
+  opacity: 0;
+  transform: scale(0.92);
+  width: 76px;
+  height: 76px;
+  border: 1px solid rgba(68, 247, 255, 0.42);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,0.28), transparent 38%),
+    rgba(8, 14, 32, 0.66);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 24px rgba(68, 247, 255, 0.22);
+  backdrop-filter: blur(14px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.fire-button--active {
+  pointer-events: auto;
+  opacity: 1;
+  transform: scale(1);
+}
+
 @keyframes floatPreview {
   0%, 100% { transform: translateY(0) rotate(-2deg); }
   50% { transform: translateY(-10px) rotate(2deg); }
@@ -374,5 +404,9 @@ h2 {
 
   .energy-bar {
     width: 112px;
+  }
+
+  .fire-button {
+    display: block;
   }
 }
