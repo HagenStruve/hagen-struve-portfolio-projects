@@ -1,24 +1,40 @@
 const randomRange = (min, max) => min + Math.random() * (max - min);
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export class Fragment {
-  constructor(bounds) {
-    this.x = randomRange(48, bounds.width - 48);
-    this.y = randomRange(72, bounds.height * 0.72);
-    this.vx = randomRange(-12, 12);
-    this.vy = randomRange(12, 34);
+  constructor(bounds, hazards = []) {
+    const riskyHazard = hazards.length && Math.random() > 0.55
+      ? hazards[Math.floor(Math.random() * hazards.length)]
+      : null;
+
+    if (riskyHazard) {
+      const angle = randomRange(0, Math.PI * 2);
+      const distance = randomRange(86, 152);
+      this.x = clamp(riskyHazard.x + Math.cos(angle) * distance, 54, bounds.width - 54);
+      this.y = clamp(riskyHazard.y + Math.sin(angle) * distance, 78, bounds.height * 0.78);
+      this.value = 125;
+      this.risky = true;
+    } else {
+      this.x = randomRange(54, bounds.width - 54);
+      this.y = randomRange(76, bounds.height * 0.78);
+      this.value = 100;
+      this.risky = false;
+    }
+
+    this.vx = randomRange(-24, 24);
+    this.vy = randomRange(18, 52);
     this.radius = 15;
     this.phase = randomRange(0, Math.PI * 2);
-    this.value = 100;
   }
 
   update(dt, bounds) {
     this.phase += dt * 4.2;
-    this.x += this.vx * dt + Math.sin(this.phase) * 5 * dt;
+    this.x += this.vx * dt + Math.sin(this.phase) * 18 * dt;
     this.y += this.vy * dt;
 
     if (this.y > bounds.height + 60) {
       this.y = -40;
-      this.x = randomRange(48, bounds.width - 48);
+      this.x = randomRange(54, bounds.width - 54);
     }
   }
 
@@ -33,7 +49,7 @@ export class Fragment {
 
     const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 42);
     glow.addColorStop(0, "rgba(255,255,255,0.9)");
-    glow.addColorStop(0.22, "rgba(68,247,255,0.5)");
+    glow.addColorStop(0.22, this.risky ? "rgba(255,255,255,0.72)" : "rgba(68,247,255,0.5)");
     glow.addColorStop(1, "rgba(68,247,255,0)");
     ctx.fillStyle = glow;
     ctx.beginPath();
@@ -57,24 +73,39 @@ export class Fragment {
 }
 
 export class Asteroid {
-  constructor(bounds) {
-    const radius = randomRange(24, 54);
-    const fromSide = Math.random() > 0.72;
+  constructor(bounds, speedMultiplier = 1) {
+    const roll = Math.random();
+    const variant = roll > 0.72 ? "small-fast" : roll > 0.34 ? "medium" : "large-slow";
+    const radius = variant === "small-fast"
+      ? randomRange(16, 28)
+      : variant === "large-slow"
+        ? randomRange(48, 70)
+        : randomRange(28, 46);
+    const fromSide = Math.random() > (variant === "small-fast" ? 0.54 : 0.68);
 
     this.radius = radius;
     this.x = fromSide
       ? (Math.random() > 0.5 ? bounds.width + radius : -radius)
       : randomRange(radius, bounds.width - radius);
     this.y = fromSide ? randomRange(60, bounds.height * 0.52) : -radius;
-    this.vx = fromSide
-      ? (this.x > bounds.width ? randomRange(-110, -54) : randomRange(54, 110))
-      : randomRange(-48, 48);
-    this.vy = randomRange(48, 115);
+    const sideDrift = variant === "small-fast" ? randomRange(96, 170) : randomRange(58, 128);
+    const topDrift = variant === "large-slow" ? randomRange(-42, 42) : randomRange(-82, 82);
+    const verticalSpeed = variant === "small-fast"
+      ? randomRange(142, 245)
+      : variant === "large-slow"
+        ? randomRange(62, 112)
+        : randomRange(98, 170);
+
+    this.vx = (fromSide
+      ? (this.x > bounds.width ? -sideDrift : sideDrift)
+      : topDrift) * speedMultiplier;
+    this.vy = verticalSpeed * speedMultiplier;
     this.rotation = randomRange(0, Math.PI * 2);
     this.spin = randomRange(-1.2, 1.2);
-    this.damage = Math.round(radius * 0.38);
+    this.damage = Math.round(radius * (variant === "small-fast" ? 0.32 : 0.38));
     this.sides = Math.floor(randomRange(8, 13));
     this.seed = Math.random() * 99;
+    this.variant = variant;
   }
 
   update(dt) {

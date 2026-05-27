@@ -16,9 +16,9 @@ export class Player {
   update(dt, input, bounds) {
     const axis = input.axis();
     const keyboardActive = Math.abs(axis.x) + Math.abs(axis.y) > 0;
-    const acceleration = 980;
-    const maxSpeed = 520;
-    const damping = Math.pow(0.00045, dt);
+    const acceleration = 1420;
+    const maxSpeed = 720;
+    const damping = Math.pow(0.0028, dt);
 
     this.vx += axis.x * acceleration * dt;
     this.vy += axis.y * acceleration * dt;
@@ -29,9 +29,9 @@ export class Player {
       const distance = Math.hypot(dx, dy);
 
       if (distance > 16) {
-        const pull = Math.min(1, distance / 220);
-        this.vx += (dx / distance) * acceleration * 0.78 * pull * dt;
-        this.vy += (dy / distance) * acceleration * 0.78 * pull * dt;
+        const pull = Math.min(1, distance / 260);
+        this.vx += (dx / distance) * acceleration * 0.54 * pull * dt;
+        this.vy += (dy / distance) * acceleration * 0.54 * pull * dt;
       }
     }
 
@@ -50,12 +50,12 @@ export class Player {
     this.x = clamp(this.x, 28, bounds.width - 28);
     this.y = clamp(this.y, 34, bounds.height - 34);
 
-    const targetRotation = clamp(this.vx * 0.004, -0.62, 0.62);
-    this.rotation += (targetRotation - this.rotation) * Math.min(1, dt * 10);
-    this.enginePulse += dt * 18;
+    const targetRotation = clamp(this.vx * 0.0034, -0.68, 0.68);
+    this.rotation += (targetRotation - this.rotation) * Math.min(1, dt * 13);
+    this.enginePulse += dt * (18 + speed * 0.018);
     this.invulnerable = Math.max(0, this.invulnerable - dt);
 
-    const drain = (keyboardActive || input.pointer.active) ? 1.45 : -3.6;
+    const drain = (keyboardActive || input.pointer.active) ? 2.25 : -2.4;
     this.energy = clamp(this.energy - drain * dt, 0, 100);
   }
 
@@ -83,7 +83,8 @@ export class Player {
   }
 
   drawEngine(ctx) {
-    const flameLength = 32 + Math.sin(this.enginePulse) * 7;
+    const speed = Math.hypot(this.vx, this.vy);
+    const flameLength = 30 + Math.sin(this.enginePulse) * 7 + Math.min(24, speed * 0.045);
     const gradient = ctx.createLinearGradient(0, 20, 0, 20 + flameLength);
     gradient.addColorStop(0, "rgba(255,255,255,0.95)");
     gradient.addColorStop(0.25, "rgba(68,247,255,0.72)");

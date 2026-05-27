@@ -41,6 +41,12 @@ const game = {
   survivalTimer: 0,
   fragmentTimer: 0,
   asteroidTimer: 1.2,
+  difficulty: {
+    level: 1,
+    spawnInterval: 1.65,
+    asteroidSpeedMultiplier: 1,
+    maxAsteroids: 6,
+  },
   shake: 0,
   fragments: [],
   asteroids: [],
@@ -70,6 +76,7 @@ function startGame() {
   game.survivalTimer = 0;
   game.fragmentTimer = 0;
   game.asteroidTimer = 1;
+  game.difficulty = getDifficulty();
   game.shake = 0;
   game.fragments = [];
   game.asteroids = [];
@@ -102,13 +109,13 @@ function randomRange(min, max) {
 }
 
 function spawnFragment() {
-  if (game.fragments.length >= 6) return;
-  game.fragments.push(new Fragment(renderer));
+  if (game.fragments.length >= 5) return;
+  game.fragments.push(new Fragment(renderer, game.asteroids));
 }
 
 function spawnAsteroid() {
-  if (game.asteroids.length >= 8) return;
-  game.asteroids.push(new Asteroid(renderer));
+  if (game.asteroids.length >= game.difficulty.maxAsteroids) return;
+  game.asteroids.push(new Asteroid(renderer, game.difficulty.asteroidSpeedMultiplier));
 }
 
 function addScore(amount) {
@@ -144,6 +151,16 @@ function endGame() {
   setState("gameover");
 }
 
+function getDifficulty() {
+  const level = game.elapsed >= 60 ? 4 : game.elapsed >= 40 ? 3 : game.elapsed >= 20 ? 2 : 1;
+  return {
+    level,
+    spawnInterval: Math.max(0.58, 1.62 - (level - 1) * 0.24 - game.elapsed * 0.006),
+    asteroidSpeedMultiplier: 1 + (level - 1) * 0.18 + Math.min(0.28, game.elapsed * 0.003),
+    maxAsteroids: Math.min(10, 5 + level),
+  };
+}
+
 function update(dt) {
   background.resize(renderer.width, renderer.height);
   background.update(dt);
@@ -151,21 +168,23 @@ function update(dt) {
 
   if (game.state === "playing") {
     game.elapsed += dt;
+    game.difficulty = getDifficulty();
     game.statusLock = Math.max(0, game.statusLock - dt);
 
     player.update(dt, input, renderer);
     particles.emitThruster(player, dt);
+    applySpeedFeel(dt);
 
     game.fragmentTimer -= dt;
     if (game.fragmentTimer <= 0) {
       spawnFragment();
-      game.fragmentTimer = randomRange(0.75, 1.55);
+      game.fragmentTimer = randomRange(1.05, 1.85) - Math.min(0.38, game.elapsed * 0.004);
     }
 
     game.asteroidTimer -= dt;
     if (game.asteroidTimer <= 0) {
       spawnAsteroid();
-      game.asteroidTimer = randomRange(0.85, Math.max(0.95, 1.9 - game.elapsed * 0.012));
+      game.asteroidTimer = randomRange(game.difficulty.spawnInterval * 0.72, game.difficulty.spawnInterval * 1.22);
     }
 
     for (const fragment of game.fragments) fragment.update(dt, renderer);
@@ -176,7 +195,7 @@ function update(dt) {
     game.survivalTimer += dt;
     if (game.survivalTimer >= 5) {
       game.survivalTimer = 0;
-      addScore(25);
+      addScore(15);
     }
 
     game.asteroids = game.asteroids.filter((asteroid) => !outsideBounds(asteroid, renderer));
@@ -187,13 +206,31 @@ function update(dt) {
   }
 }
 
+function applySpeedFeel(dt) {
+  const speed = Math.hypot(player.vx, player.vy);
+  if (speed > 610) {
+    game.shake = Math.max(game.shake, 1.1);
+  }
+
+  const nearMiss = game.asteroids.some((asteroid) => {
+    const distance = Math.hypot(asteroid.x - player.x, asteroid.y - player.y);
+    return distance > player.radius + asteroid.radius && distance < player.radius + asteroid.radius + 22;
+  });
+
+  if (nearMiss) {
+    game.shake = Math.max(game.shake, 1.6);
+  }
+
+  game.shake = Math.max(0, game.shake - dt * 4);
+}
+
 function handleCollisions() {
   game.fragments = game.fragments.filter((fragment) => {
     if (!circleCollision(player, fragment)) return true;
 
     addScore(fragment.value);
-    player.heal(5);
-    particles.emitBurst(fragment.x, fragment.y, "rgba(68,247,255,", 26, 250);
+    player.heal(fragment.risky ? 4 : 3);
+    particles.emitBurst(fragment.x, fragment.y, "rgba(68,247,255,", fragment.risky ? 32 : 26, fragment.risky ? 300 : 250);
     triggerFlash(collectFlash);
     flashPanel(energyPanel);
     setMomentaryStatus("SALVAGING");
@@ -216,8 +253,15 @@ function handleCollisions() {
 function updateStatus() {
   if (game.statusLock > 0) return;
 
+  const dangerClose = game.asteroids.some((asteroid) => {
+    const distance = Math.hypot(asteroid.x - player.x, asteroid.y - player.y);
+    return distance < player.radius + asteroid.radius + 72;
+  });
+
   if (player.energy <= 22) game.status = "CRITICAL";
-  else if (player.energy <= 42 || game.asteroids.length >= 6) game.status = "WARNING";
+  else if (dangerClose) game.status = "DANGER";
+  else if (Math.hypot(player.vx, player.vy) > 560) game.status = "HIGH VELOCITY";
+  else if (player.energy <= 42 || game.asteroids.length >= game.difficulty.maxAsteroids - 1) game.status = "DANGER";
   else if (game.fragments.some((fragment) => Math.hypot(fragment.x - player.x, fragment.y - player.y) < 120)) game.status = "SALVAGING";
   else game.status = "SCANNING";
 }
@@ -231,6 +275,11 @@ function draw() {
   if (game.shake > 0) {
     ctx.translate((Math.random() - 0.5) * game.shake, (Math.random() - 0.5) * game.shake);
     game.shake *= 0.9;
+  }
+
+  const speed = Math.hypot(player.vx, player.vy);
+  if (game.state === "playing" && speed > 360) {
+    ctx.translate(-player.vx * 0.012, -player.vy * 0.012);
   }
 
   background.draw(ctx);
