@@ -14,6 +14,8 @@
 
     <div class="vignette"></div>
     <div class="scanlines"></div>
+    <div id="collectFlash" class="collect-flash"></div>
+    <div id="damageFlash" class="damage-flash"></div>
 
     <section id="startScreen" class="screen screen--active">
       <div class="hero-card">
@@ -36,7 +38,7 @@
         <div id="howToPanel" class="howto">
           <strong>Steuerung:</strong>
           <span>WASD / Pfeiltasten bewegen</span>
-          <span>Maus oder Touch zieht das Schiff sanft zum Ziel</span>
+          <span>Maus gedrückt halten oder Touch ziehen</span>
           <span>ESC pausiert</span>
         </div>
       </div>
@@ -51,6 +53,19 @@
       </div>
     </section>
 
+    <section id="gameOverScreen" class="screen">
+      <div class="modal-card">
+        <div class="eyebrow">SIGNAL LOST</div>
+        <h2>Game Over</h2>
+        <p>Dein Salvage-Schiff hat die Energie verloren.</p>
+        <div class="results">
+          <span>Score <strong id="finalScore">0000</strong></span>
+          <span>Zeit <strong id="finalTime">00:00</strong></span>
+        </div>
+        <button id="restartButton" class="primary-button">Nochmal starten</button>
+      </div>
+    </section>
+
     <div id="hud" class="hud hud--hidden">
       <div class="hud__panel">
         <span class="hud__label">ENERGIE</span>
@@ -62,7 +77,7 @@
       </div>
       <div class="hud__panel hide-small">
         <span class="hud__label">STATUS</span>
-        <strong>SCAN READY</strong>
+        <strong id="statusText">SCAN READY</strong>
       </div>
     </div>
   </div>

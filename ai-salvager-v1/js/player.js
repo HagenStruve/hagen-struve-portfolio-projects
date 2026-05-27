@@ -10,29 +10,39 @@ export class Player {
     this.rotation = 0;
     this.energy = 100;
     this.enginePulse = 0;
+    this.invulnerable = 0;
   }
 
   update(dt, input, bounds) {
     const axis = input.axis();
-    const speed = 760;
-    const damping = Math.pow(0.001, dt);
+    const keyboardActive = Math.abs(axis.x) + Math.abs(axis.y) > 0;
+    const acceleration = 980;
+    const maxSpeed = 520;
+    const damping = Math.pow(0.00045, dt);
 
-    this.vx += axis.x * speed * dt;
-    this.vy += axis.y * speed * dt;
+    this.vx += axis.x * acceleration * dt;
+    this.vy += axis.y * acceleration * dt;
 
-    if (input.pointer.active) {
+    if (!keyboardActive && input.pointer.active) {
       const dx = input.pointer.x - this.x;
       const dy = input.pointer.y - this.y;
       const distance = Math.hypot(dx, dy);
 
       if (distance > 16) {
-        this.vx += (dx / distance) * speed * 0.62 * dt;
-        this.vy += (dy / distance) * speed * 0.62 * dt;
+        const pull = Math.min(1, distance / 220);
+        this.vx += (dx / distance) * acceleration * 0.78 * pull * dt;
+        this.vy += (dy / distance) * acceleration * 0.78 * pull * dt;
       }
     }
 
     this.vx *= damping;
     this.vy *= damping;
+
+    const speed = Math.hypot(this.vx, this.vy);
+    if (speed > maxSpeed) {
+      this.vx = (this.vx / speed) * maxSpeed;
+      this.vy = (this.vy / speed) * maxSpeed;
+    }
 
     this.x += this.vx * dt;
     this.y += this.vy * dt;
@@ -43,15 +53,28 @@ export class Player {
     const targetRotation = clamp(this.vx * 0.004, -0.62, 0.62);
     this.rotation += (targetRotation - this.rotation) * Math.min(1, dt * 10);
     this.enginePulse += dt * 18;
+    this.invulnerable = Math.max(0, this.invulnerable - dt);
 
-    const drain = (Math.abs(axis.x) + Math.abs(axis.y) > 0 || input.pointer.active) ? 1.8 : -4;
+    const drain = (keyboardActive || input.pointer.active) ? 1.45 : -3.6;
     this.energy = clamp(this.energy - drain * dt, 0, 100);
+  }
+
+  heal(amount) {
+    this.energy = clamp(this.energy + amount, 0, 100);
+  }
+
+  takeDamage(amount) {
+    if (this.invulnerable > 0) return false;
+    this.energy = clamp(this.energy - amount, 0, 100);
+    this.invulnerable = 0.72;
+    return true;
   }
 
   draw(ctx) {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
+    ctx.globalAlpha = this.invulnerable > 0 ? 0.58 + Math.sin(this.enginePulse * 1.6) * 0.28 : 1;
 
     this.drawEngine(ctx);
     this.drawShip(ctx);

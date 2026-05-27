@@ -3,6 +3,7 @@ export class Input {
     this.keys = new Set();
     this.pointer = {
       active: false,
+      pressed: false,
       x: 0,
       y: 0,
     };
@@ -15,21 +16,34 @@ export class Input {
       this.keys.delete(event.key.toLowerCase());
     });
 
-    const updatePointer = (event) => {
+    const updatePointerPosition = (event) => {
       const point = event.touches ? event.touches[0] : event;
       this.pointer.x = point.clientX;
       this.pointer.y = point.clientY;
+    };
+
+    const activatePointer = (event) => {
+      updatePointerPosition(event);
+      this.pointer.pressed = true;
       this.pointer.active = true;
     };
 
-    canvas.addEventListener("pointermove", updatePointer, { passive: true });
-    canvas.addEventListener("pointerdown", updatePointer, { passive: true });
-    canvas.addEventListener("touchmove", updatePointer, { passive: true });
-    canvas.addEventListener("touchstart", updatePointer, { passive: true });
-
-    canvas.addEventListener("pointerleave", () => {
+    const deactivatePointer = () => {
+      this.pointer.pressed = false;
       this.pointer.active = false;
-    });
+    };
+
+    canvas.addEventListener("pointermove", updatePointerPosition, { passive: true });
+    canvas.addEventListener("pointerdown", activatePointer, { passive: true });
+    canvas.addEventListener("touchmove", (event) => {
+      if (this.pointer.pressed) updatePointerPosition(event);
+    }, { passive: true });
+    canvas.addEventListener("touchstart", activatePointer, { passive: true });
+
+    window.addEventListener("pointerup", deactivatePointer);
+    window.addEventListener("touchend", deactivatePointer);
+    window.addEventListener("touchcancel", deactivatePointer);
+    canvas.addEventListener("pointerleave", deactivatePointer);
   }
 
   axis() {
