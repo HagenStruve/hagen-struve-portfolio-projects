@@ -500,7 +500,7 @@ function draw() {
     for (const projectile of game.enemyProjectiles) projectile.draw(ctx);
     particles.draw(ctx);
     player.draw(ctx);
-  } else {
+  } else if (!isCompactStartScreen()) {
     drawAmbientShip(ctx);
   }
 
@@ -522,6 +522,10 @@ function drawAmbientShip(ctx) {
   ctx.scale(0.9, 0.9);
   player.drawShip(ctx);
   ctx.restore();
+}
+
+function isCompactStartScreen() {
+  return renderer.width <= 720 || renderer.height <= 620;
 }
 
 function loop(time = 0) {
