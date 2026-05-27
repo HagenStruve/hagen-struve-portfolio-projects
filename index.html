@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hagen Struve | AI Product Builder</title>
+  <link rel="icon" type="image/png" href="./assets/brand/favicon.png">
+  <link rel="apple-touch-icon" href="./assets/brand/apple-touch-icon.png">
   <style>
     :root {
       --bg: #050706;
@@ -84,9 +86,17 @@
 
     .side-logo {
       align-self: center;
-      font-size: 26px;
-      letter-spacing: -.08em;
-      color: rgba(255,255,255,.92);
+      display: grid;
+      place-items: center;
+      width: 52px;
+      height: 52px;
+    }
+
+    .side-logo img {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      display: block;
     }
 
     .side-nav {
@@ -444,7 +454,9 @@
   <div class="grain" aria-hidden="true"></div>
 
   <aside class="side" aria-label="Seitennavigation">
-    <a class="side-logo" href="#top">HS</a>
+    <a class="side-logo" href="#top" aria-label="Hagen Struve Startseite">
+      <img src="./assets/brand/hs-logo-white.png" alt="HS Logo">
+    </a>
     <nav class="side-nav">
       <a class="active" href="#top" title="Start">⌂</a>
       <a href="#profil" title="Profil">◌</a>
