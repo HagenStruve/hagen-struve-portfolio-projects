@@ -9,3 +9,37 @@ html, body, #root {
 body {
   margin: 0;
 }
+
+.invoice-app-shell,
+.invoice-form-column,
+.invoice-preview-column {
+  box-sizing: border-box;
+}
+
+.invoice-form-column,
+.invoice-preview-column {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (min-width: 1280px) {
+  .invoice-app-shell {
+    grid-template-columns: minmax(0, 1fr) minmax(520px, 680px);
+  }
+
+  .invoice-preview-column {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    width: 100%;
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+@media (min-width: 1536px) {
+  .invoice-app-shell {
+    grid-template-columns: minmax(0, 1fr) minmax(560px, 720px);
+  }
+}
