@@ -548,6 +548,7 @@ export default function Rechnungsprogramm() {
   const [serviceHours, setServiceHours] = useState({});
   const [saveMessage, setSaveMessage] = useState("");
   const [storageReady, setStorageReady] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef(null);
   const saveTimerRef = useRef(null);
   const autoSaveTimerRef = useRef(null);
@@ -1056,9 +1057,82 @@ export default function Rechnungsprogramm() {
     showSaveMessage("Alle Daten wurden zurückgesetzt.");
   };
 
+  const renderInvoicePreview = () => (
+    <Card className="overflow-hidden rounded-2xl shadow-sm print:border-0 print:shadow-none">
+      <CardHeader className="border-b print:border-b"><CardTitle className="text-xl sm:text-2xl">Rechnungsvorschau</CardTitle></CardHeader>
+      <CardContent className="p-4 sm:p-6 md:p-8">
+        <div className="space-y-8 text-sm">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="break-words text-xl font-bold sm:text-2xl">{invoice.companyName || "Firmenname"}</h2>
+              <p className="whitespace-pre-line break-words text-slate-600">{invoice.companyAddress}</p>
+              <p className="break-words text-slate-600">{invoice.companyEmail}</p>
+              <p className="break-words text-slate-600">{invoice.companyPhone}</p>
+            </div>
+            <div className="text-left sm:text-right">
+              <h3 className="text-2xl font-bold tracking-tight sm:text-3xl">RECHNUNG</h3>
+              <p><span className="font-medium">Nr.:</span> {invoice.invoiceNumber}</p>
+              <p><span className="font-medium">Datum:</span> {invoice.invoiceDate}</p>
+              <p><span className="font-medium">Fällig:</span> {invoice.dueDate}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-[0.2em] text-slate-500">Rechnung an</p>
+            <p className="break-words text-base font-semibold">{invoice.customerName || "Kundenname"}</p>
+            <p className="whitespace-pre-line break-words text-slate-600">{invoice.customerAddress || "Kundenadresse"}</p>
+            <p className="break-words text-slate-600">{invoice.customerEmail || "Keine E-Mail-Adresse"}</p>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border">
+            <table className="w-full min-w-[680px] text-left">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="px-4 py-3">Beschreibung</th>
+                  <th className="px-4 py-3">Menge</th>
+                  <th className="px-4 py-3">Einheit</th>
+                  <th className="px-4 py-3">Einzelpreis</th>
+                  <th className="px-4 py-3">Diesel</th>
+                  <th className="px-4 py-3 text-right">Betrag</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoice.items.map((item) => (
+                  <tr key={item.id} className="border-t align-top">
+                    <td className="px-4 py-3 break-words">{item.description || "-"}</td>
+                    <td className="px-4 py-3">{item.quantity ?? item.hours}</td>
+                    <td className="px-4 py-3">{item.unit || ""}</td>
+                    <td className="px-4 py-3">
+                      {currency(item.unitPrice)}
+                      <span className="block text-xs text-slate-500">{normalizePriceMode(item.priceMode) === "gross" ? "brutto vereinbart" : "netto"}</span>
+                    </td>
+                    <td className="px-4 py-3">{getLineFuel(item) > 0 ? formatFuel(getLineFuel(item)) : "-"}</td>
+                    <td className="px-4 py-3 text-right">{currency(getLineNetTotal(item, invoice.taxRate))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="ml-auto w-full max-w-sm space-y-2 rounded-2xl border p-4">
+            <SummaryRow label="Zwischensumme Netto" value={currency(subtotal)} />
+            <SummaryRow label="Gesamt Dieselverbrauch" value={formatFuel(totalFuel)} />
+            <SummaryRow label={`MwSt. (${invoice.taxRate}%)`} value={currency(taxAmount)} />
+            <SummaryRow label="Gesamt Brutto" value={currency(total)} strong />
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-[0.2em] text-slate-500">Hinweis</p>
+            <p className="whitespace-pre-line break-words text-slate-700">{invoice.notes}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-50 p-3 sm:p-4 md:p-8 print:bg-white">
-      <div className="mx-auto grid w-full max-w-[1800px] gap-4 md:gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(560px,0.75fr)]">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 p-3 pb-24 sm:p-4 sm:pb-24 md:p-8 md:pb-28 xl:pb-8 print:bg-white">
+      <div className="mx-auto grid w-full max-w-[1800px] gap-4 md:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(430px,0.72fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(560px,0.75fr)]">
         <div className="grid gap-6 print:hidden">
           <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-center 2xl:justify-between">
             <div className="flex items-start gap-3 sm:items-center">
@@ -1493,7 +1567,7 @@ export default function Rechnungsprogramm() {
           </Card>
         </div>
 
-        <div className="min-w-0 2xl:sticky 2xl:top-6 2xl:self-start">
+        <div className="hidden min-w-0 xl:block xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:self-start xl:overflow-y-auto">
           <Card className="overflow-hidden rounded-2xl shadow-sm print:border-0 print:shadow-none">
             <CardHeader className="border-b print:border-b"><CardTitle className="text-xl sm:text-2xl">Rechnungsvorschau</CardTitle></CardHeader>
             <CardContent className="p-4 sm:p-6 md:p-8">
@@ -1566,6 +1640,32 @@ export default function Rechnungsprogramm() {
           </Card>
         </div>
       </div>
+
+      <Button
+        className="fixed bottom-4 right-4 z-30 shadow-lg xl:hidden"
+        onClick={() => setPreviewOpen(true)}
+      >
+        <Receipt className="mr-2 h-4 w-4" /> Rechnung ansehen
+      </Button>
+
+      {previewOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end bg-slate-950/70 p-3 sm:items-center sm:p-6 xl:hidden" role="dialog" aria-modal="true" aria-label="Rechnungsvorschau">
+          <div className="relative max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-white shadow-2xl sm:mx-auto sm:max-w-4xl">
+            <Button
+              className="absolute right-3 top-3 z-10"
+              variant="outline"
+              size="icon"
+              onClick={() => setPreviewOpen(false)}
+              aria-label="Rechnungsvorschau schliessen"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <div className="pt-12 sm:pt-10">
+              {renderInvoicePreview()}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
