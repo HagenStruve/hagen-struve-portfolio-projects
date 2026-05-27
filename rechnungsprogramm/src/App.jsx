@@ -1131,8 +1131,8 @@ export default function Rechnungsprogramm() {
   );
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-50 p-3 pb-24 sm:p-4 sm:pb-24 md:p-8 md:pb-28 xl:pb-8 print:bg-white">
-      <main className="invoice-app-shell mx-auto grid w-full max-w-[1800px] grid-cols-1 items-start gap-4 md:gap-6">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 p-3 pb-24 sm:p-4 sm:pb-24 md:p-8 md:pb-28 xl:pb-8 min-[1700px]:pr-[680px] print:bg-white">
+      <main className="invoice-app-shell mx-auto grid w-full max-w-[1600px] grid-cols-1 items-start gap-4 md:gap-6">
         <section className="invoice-form-column grid min-w-0 gap-6 print:hidden">
           <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-center 2xl:justify-between">
             <div className="flex items-start gap-3 sm:items-center">
@@ -1567,21 +1567,21 @@ export default function Rechnungsprogramm() {
           </Card>
         </section>
 
-        <aside className="invoice-preview-column hidden min-w-0 xl:block">
+        <aside className="invoice-preview-column hidden min-[1700px]:block">
           {renderInvoicePreview()}
         </aside>
 
       </main>
 
       <Button
-        className="fixed bottom-4 right-4 z-30 shadow-lg xl:hidden"
+        className="fixed bottom-4 right-4 z-30 shadow-lg min-[1700px]:hidden"
         onClick={() => setPreviewOpen(true)}
       >
         <Receipt className="mr-2 h-4 w-4" /> Rechnung ansehen
       </Button>
 
       {previewOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end bg-slate-950/70 p-3 sm:items-center sm:p-6 xl:hidden" role="dialog" aria-modal="true" aria-label="Rechnungsvorschau">
+        <div className="fixed inset-0 z-50 flex items-end bg-slate-950/70 p-3 sm:items-center sm:p-6 min-[1700px]:hidden" role="dialog" aria-modal="true" aria-label="Rechnungsvorschau">
           <div className="relative max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-white shadow-2xl sm:mx-auto sm:max-w-4xl">
             <Button
               className="absolute right-3 top-3 z-10"
