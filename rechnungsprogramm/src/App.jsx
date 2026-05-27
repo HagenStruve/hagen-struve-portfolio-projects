@@ -55,6 +55,7 @@ const emptyService = () => ({
 });
 
 const createDefaultCompanySettings = () => ({
+  id: "",
   companyName: "",
   companyAddress: "",
   companyEmail: "",
@@ -63,6 +64,7 @@ const createDefaultCompanySettings = () => ({
 
 const applyCompanySettingsToInvoice = (invoice, companySettings) => ({
   ...invoice,
+  companyId: companySettings.id,
   companyName: companySettings.companyName,
   companyAddress: companySettings.companyAddress,
   companyEmail: companySettings.companyEmail,
@@ -70,7 +72,11 @@ const applyCompanySettingsToInvoice = (invoice, companySettings) => ({
 });
 
 const createDefaultInvoice = (companySettings = createDefaultCompanySettings()) => ({
-  ...companySettings,
+  companyId: companySettings.id,
+  companyName: companySettings.companyName,
+  companyAddress: companySettings.companyAddress,
+  companyEmail: companySettings.companyEmail,
+  companyPhone: companySettings.companyPhone,
   customerId: "",
   customerName: "",
   customerAddress: "",
@@ -105,6 +111,7 @@ function createAppState(overrides = {}) {
     services: createDefaultServices(),
     serviceHours: {},
     companySettings: createDefaultCompanySettings(),
+    companyProfiles: [],
     ...overrides,
   };
 }
@@ -123,6 +130,7 @@ function normalizeAppState(raw) {
   const customers = Array.isArray(raw.customers) ? raw.customers : createDefaultCustomers();
   const services = Array.isArray(raw.services) ? raw.services : createDefaultServices();
   const serviceHours = isPlainObject(raw.serviceHours) ? raw.serviceHours : {};
+  const companyProfiles = normalizeCompanyProfiles(raw.companyProfiles);
   const invoices = Array.isArray(raw.invoices)
     ? raw.invoices.filter((entry) => isPlainObject(entry?.invoice))
     : [];
@@ -134,6 +142,7 @@ function normalizeAppState(raw) {
     services,
     serviceHours,
     companySettings,
+    companyProfiles,
   });
 }
 
@@ -147,11 +156,32 @@ function normalizeCompanySettings(raw) {
         : {};
 
   return {
+    id: typeof source.id === "string" ? source.id : typeof source.companyId === "string" ? source.companyId : "",
     companyName: typeof source.companyName === "string" ? source.companyName : "",
     companyAddress: typeof source.companyAddress === "string" ? source.companyAddress : "",
     companyEmail: typeof source.companyEmail === "string" ? source.companyEmail : "",
     companyPhone: typeof source.companyPhone === "string" ? source.companyPhone : "",
   };
+}
+
+function normalizeCompanyProfiles(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter(isPlainObject)
+    .map((entry) => ({
+      ...normalizeCompanySettings(entry),
+      id: typeof entry.id === "string" && entry.id ? entry.id : createId(),
+    }));
+}
+
+function hasCompanySettings(settings) {
+  return Boolean(
+    settings.companyName.trim() ||
+      settings.companyAddress.trim() ||
+      settings.companyEmail.trim() ||
+      settings.companyPhone.trim()
+  );
 }
 
 function createInvoiceSnapshot(invoice) {
@@ -307,6 +337,10 @@ function runInlineTests() {
     normalizeAppState({ companySettings: { companyName: "Testfirma", companyEmail: "test@example.test" } }).invoice.companyName === "Testfirma",
     "Firmendaten sollten in die aktuelle Rechnung übernommen werden"
   );
+  console.assert(
+    normalizeAppState({ companyProfiles: [{ companyName: "Profil A" }] }).companyProfiles.length === 1,
+    "Firmenprofile sollten normalisiert werden"
+  );
 
   const testService = { id: "1", name: "Test", pricePerHour: 99, fuelPerHour: 3.5 };
   const newItem = createInvoiceItemFromService(testService, 2.5);
@@ -345,6 +379,7 @@ export default function Rechnungsprogramm() {
   const [invoice, setInvoice] = useState(() => createDefaultInvoice());
   const [invoices, setInvoices] = useState([]);
   const [companySettings, setCompanySettings] = useState(() => createDefaultCompanySettings());
+  const [companyProfiles, setCompanyProfiles] = useState([]);
   const [customers, setCustomers] = useState(() => createDefaultCustomers());
   const [services, setServices] = useState(() => createDefaultServices());
   const [newCustomer, setNewCustomer] = useState(() => emptyCustomer());
@@ -382,6 +417,7 @@ export default function Rechnungsprogramm() {
           setInvoice(next.invoice);
           setInvoices(next.invoices);
           setCompanySettings(next.companySettings);
+          setCompanyProfiles(next.companyProfiles);
           setCustomers(next.customers.length ? next.customers : createDefaultCustomers());
           setServices(next.services.length ? next.services : createDefaultServices());
           setServiceHours(next.serviceHours);
@@ -405,12 +441,12 @@ export default function Rechnungsprogramm() {
 
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
-      saveAppState({ invoice, invoices, customers, services, serviceHours, companySettings }).catch((error) => {
+      saveAppState({ invoice, invoices, customers, services, serviceHours, companySettings, companyProfiles }).catch((error) => {
         console.error("Automatisches Speichern fehlgeschlagen", error);
         showSaveMessage("Automatisches Speichern fehlgeschlagen.");
       });
     }, 350);
-  }, [storageReady, invoice, invoices, customers, services, serviceHours, companySettings]);
+  }, [storageReady, invoice, invoices, customers, services, serviceHours, companySettings, companyProfiles]);
 
   useEffect(() => {
     return () => {
@@ -437,6 +473,52 @@ export default function Rechnungsprogramm() {
   const updateCompanyField = (field, value) => {
     setCompanySettings((prev) => ({ ...prev, [field]: value }));
     setInvoice((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const saveCompanyProfile = () => {
+    if (!hasCompanySettings(companySettings)) {
+      showSaveMessage("Bitte zuerst Firmendaten eintragen.");
+      return;
+    }
+
+    const profile = {
+      ...companySettings,
+      id: companySettings.id || createId(),
+      companyName: companySettings.companyName.trim(),
+      companyAddress: companySettings.companyAddress.trim(),
+      companyEmail: companySettings.companyEmail.trim(),
+      companyPhone: companySettings.companyPhone.trim(),
+    };
+
+    setCompanySettings(profile);
+    setInvoice((prev) => applyCompanySettingsToInvoice(prev, profile));
+    setCompanyProfiles((prev) => {
+      const withoutCurrent = prev.filter((entry) => entry.id !== profile.id);
+      return [profile, ...withoutCurrent].slice(0, 50);
+    });
+    showSaveMessage("Firmendaten gespeichert.");
+  };
+
+  const applyCompanyProfile = (id) => {
+    const profile = companyProfiles.find((entry) => entry.id === id);
+    if (!profile) return;
+
+    setCompanySettings(profile);
+    setInvoice((prev) => applyCompanySettingsToInvoice(prev, profile));
+    showSaveMessage("Firmendaten übernommen.");
+  };
+
+  const removeCompanyProfile = (id) => {
+    const confirmed = window.confirm("Dieses Firmenprofil wirklich löschen?");
+    if (!confirmed) return;
+
+    setCompanyProfiles((prev) => prev.filter((entry) => entry.id !== id));
+    if (companySettings.id === id) {
+      const emptySettings = createDefaultCompanySettings();
+      setCompanySettings(emptySettings);
+      setInvoice((prev) => applyCompanySettingsToInvoice(prev, emptySettings));
+    }
+    showSaveMessage("Firmenprofil gelöscht.");
   };
 
   const updateItem = (id, field, value) => {
@@ -547,7 +629,7 @@ export default function Rechnungsprogramm() {
 
   const saveData = async () => {
     try {
-      await saveAppState({ invoice, invoices, customers, services, serviceHours, companySettings });
+      await saveAppState({ invoice, invoices, customers, services, serviceHours, companySettings, companyProfiles });
       showSaveMessage("Daten lokal in IndexedDB gespeichert.");
     } catch (error) {
       console.error("Speichern fehlgeschlagen", error);
@@ -583,6 +665,7 @@ export default function Rechnungsprogramm() {
         invoice,
         invoices,
         companySettings,
+        companyProfiles,
         settings: companySettings,
         customers,
         services,
@@ -623,7 +706,13 @@ export default function Rechnungsprogramm() {
       const parsed = JSON.parse(text);
       if (
         !isPlainObject(parsed) ||
-        (!parsed.invoice && !parsed.companySettings && !Array.isArray(parsed.customers) && !Array.isArray(parsed.services))
+        (
+          !parsed.invoice &&
+          !parsed.companySettings &&
+          !Array.isArray(parsed.companyProfiles) &&
+          !Array.isArray(parsed.customers) &&
+          !Array.isArray(parsed.services)
+        )
       ) {
         throw new Error("Ungültiges Backup-Format.");
       }
@@ -632,6 +721,7 @@ export default function Rechnungsprogramm() {
       setInvoice(imported.invoice);
       setInvoices(imported.invoices);
       setCompanySettings(imported.companySettings);
+      setCompanyProfiles(imported.companyProfiles);
       setCustomers(imported.customers.length ? imported.customers : createDefaultCustomers());
       setServices(imported.services.length ? imported.services : createDefaultServices());
       setServiceHours(imported.serviceHours);
@@ -672,6 +762,7 @@ export default function Rechnungsprogramm() {
     }
     const defaultCompanySettings = createDefaultCompanySettings();
     setCompanySettings(defaultCompanySettings);
+    setCompanyProfiles([]);
     setInvoice(createDefaultInvoice(defaultCompanySettings));
     setInvoices([]);
     setCustomers(createDefaultCustomers());
@@ -805,15 +896,55 @@ export default function Rechnungsprogramm() {
 
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
-              <CardTitle>Eigene Firmendaten</CardTitle>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2"><Receipt className="h-5 w-5" /><CardTitle>Eigene Firmendaten</CardTitle></div>
+                <span className="text-xs text-slate-500">Karte anklicken = als Absender übernehmen</span>
+              </div>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <Field label="Firmenname"><Input value={companySettings.companyName} onChange={(e) => updateCompanyField("companyName", e.target.value)} /></Field>
-              <Field label="E-Mail"><Input value={companySettings.companyEmail} onChange={(e) => updateCompanyField("companyEmail", e.target.value)} /></Field>
-              <Field label="Telefon"><Input value={companySettings.companyPhone} onChange={(e) => updateCompanyField("companyPhone", e.target.value)} /></Field>
-              <div className="grid gap-2 md:col-span-2">
-                <Label>Adresse</Label>
-                <Textarea value={companySettings.companyAddress} onChange={(e) => updateCompanyField("companyAddress", e.target.value)} rows={4} />
+            <CardContent className="grid gap-4">
+              <div className="grid gap-4 rounded-2xl border p-4 md:grid-cols-2">
+                <Field label="Firmenname"><Input placeholder="z. B. MaschinenLog" value={companySettings.companyName} onChange={(e) => updateCompanyField("companyName", e.target.value)} /></Field>
+                <Field label="E-Mail"><Input placeholder="name@example.de" value={companySettings.companyEmail} onChange={(e) => updateCompanyField("companyEmail", e.target.value)} /></Field>
+                <Field label="Telefon"><Input placeholder="+49 ..." value={companySettings.companyPhone} onChange={(e) => updateCompanyField("companyPhone", e.target.value)} /></Field>
+                <div className="grid gap-2 md:col-span-2">
+                  <Label>Adresse</Label>
+                  <Textarea placeholder={"Straße und Hausnummer\nPLZ Ort"} value={companySettings.companyAddress} onChange={(e) => updateCompanyField("companyAddress", e.target.value)} rows={4} />
+                </div>
+                <Button className="w-full sm:w-auto" onClick={saveCompanyProfile}><Plus className="mr-2 h-4 w-4" /> Firmendaten speichern</Button>
+              </div>
+
+              <div className="grid gap-3">
+                {companyProfiles.length ? (
+                  companyProfiles.map((profile) => (
+                    <button
+                      key={profile.id}
+                      type="button"
+                      onClick={() => applyCompanyProfile(profile.id)}
+                      className={`flex w-full flex-col gap-3 rounded-2xl border p-4 text-left transition hover:border-slate-400 hover:bg-slate-50 sm:flex-row sm:justify-between ${companySettings.id === profile.id ? "border-slate-900 bg-slate-100" : ""}`}
+                    >
+                      <div className="min-w-0">
+                        <p className="break-words font-semibold">{profile.companyName || "Ohne Firmenname"}</p>
+                        <p className="whitespace-pre-line break-words text-sm text-slate-600">{profile.companyAddress || "Keine Adresse"}</p>
+                        <p className="mt-1 flex items-center gap-2 break-words text-sm text-slate-600"><Mail className="h-4 w-4" />{profile.companyEmail || "Keine E-Mail"}</p>
+                        <p className="break-words text-sm text-slate-600">{profile.companyPhone || "Keine Telefonnummer"}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeCompanyProfile(profile.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </button>
+                  ))
+                ) : (
+                  <p className="rounded-2xl border border-dashed p-4 text-sm text-slate-500">
+                    Noch kein Firmenprofil gespeichert. Lege eigene Absenderprofile an und übernimm sie per Klick in die Rechnung.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
