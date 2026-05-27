@@ -64,6 +64,20 @@ export class Input {
     return { x: x / length, y: y / length };
   }
 
+  flightControls() {
+    const left = this.keys.has("a") || this.keys.has("arrowleft");
+    const right = this.keys.has("d") || this.keys.has("arrowright");
+    const thrust = this.keys.has("w") || this.keys.has("arrowup");
+    const reverse = this.keys.has("s") || this.keys.has("arrowdown");
+
+    return {
+      rotation: (right ? 1 : 0) - (left ? 1 : 0),
+      thrust: thrust ? 1 : 0,
+      reverse: reverse ? 1 : 0,
+      active: left || right || thrust || reverse,
+    };
+  }
+
   queueFire() {
     this.fireQueued = true;
   }

@@ -5,7 +5,7 @@ import { Player } from "./player.js";
 import { Fragment, Asteroid } from "./entities.js";
 import { circleCollision, outsideBounds } from "./collision.js";
 import { ParticleSystem } from "./particles.js";
-import { UpgradePart, applyRandomUpgrade } from "./upgrades.js";
+import { UpgradePart, applyUpgrade, createDroppedPart } from "./upgrades.js";
 import { createPlayerShot } from "./projectiles.js";
 import { Drone } from "./enemies.js";
 
@@ -80,6 +80,7 @@ function startGame() {
   player.y = renderer.height * 0.62;
   player.vx = 0;
   player.vy = 0;
+  player.rotation = 0;
   player.resetUpgrades();
   player.energy = 100;
   player.invulnerable = 0;
@@ -139,6 +140,17 @@ function spawnFragment() {
 function spawnPart() {
   if (game.parts.length >= 2) return;
   game.parts.push(new UpgradePart(renderer));
+}
+
+function maybeDropPart(x, y, source = "asteroid") {
+  const combat = getCombatDifficulty();
+  const chance = source === "enemy"
+    ? Math.min(0.78, 0.48 + combat.maxEnemies * 0.08)
+    : 0.18;
+
+  if (Math.random() > chance || game.parts.length >= 4) return;
+
+  game.parts.push(createDroppedPart(renderer, x, y, source));
 }
 
 function spawnAsteroid() {
@@ -335,8 +347,8 @@ function handleCollisions() {
   game.parts = game.parts.filter((part) => {
     if (!circleCollision(player, part)) return true;
 
-    const label = applyRandomUpgrade(player);
-    particles.emitBurst(part.x, part.y, "rgba(255,189,86,", 30, 260);
+    const label = applyUpgrade(player, part.type);
+    particles.emitBurst(part.x, part.y, partParticleColor(part.type), 30, 260);
     triggerFlash(collectFlash);
     flashPanel(energyPanel);
     setMomentaryStatus(label, 1.25);
@@ -369,6 +381,13 @@ function handleCollisions() {
   });
 }
 
+function partParticleColor(type) {
+  if (type === "weapon") return "rgba(68,247,255,";
+  if (type === "engine") return "rgba(255,189,86,";
+  if (type === "energy") return "rgba(104,255,171,";
+  return "rgba(168,85,255,";
+}
+
 function resolvePlayerShots() {
   game.playerProjectiles = game.playerProjectiles.filter((projectile) => {
     for (let i = game.asteroids.length - 1; i >= 0; i--) {
@@ -378,6 +397,7 @@ function resolvePlayerShots() {
       game.asteroids.splice(i, 1);
       addScore(Math.round(35 + asteroid.radius));
       particles.emitBurst(asteroid.x, asteroid.y, "rgba(255,189,86,", 24, 260);
+      maybeDropPart(asteroid.x, asteroid.y, "asteroid");
       game.shake = Math.max(game.shake, 3);
       return false;
     }
@@ -392,6 +412,7 @@ function resolvePlayerShots() {
         game.enemies.splice(i, 1);
         addScore(250);
         particles.emitBurst(enemy.x, enemy.y, "rgba(255,79,216,", 34, 290);
+        maybeDropPart(enemy.x, enemy.y, "enemy");
         game.shake = Math.max(game.shake, 5);
       }
       return false;
@@ -470,7 +491,7 @@ function draw() {
   energyFill.classList.toggle("energy-low", game.state === "playing" && player.energy <= 28);
   scoreText.textContent = Math.floor(game.displayScore).toString().padStart(4, "0");
   statusText.textContent = game.status;
-  abilityText.textContent = player.weaponUnlocked ? `WEAPON / SPD ${player.speedLevel}` : `SPD ${player.speedLevel}`;
+  abilityText.textContent = player.weaponUnlocked ? `WEAPON / SPEED ${player.speedLevel}` : `SPEED ${player.speedLevel}`;
   shieldText.textContent = player.shield > 0 ? `${Math.ceil(player.shield)}S` : "OFF";
   fireButton.classList.toggle("fire-button--active", game.state === "playing" && player.weaponUnlocked);
 }

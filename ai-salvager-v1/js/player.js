@@ -11,6 +11,7 @@ export class Player {
     this.energy = 100;
     this.enginePulse = 0;
     this.invulnerable = 0;
+    this.thrustPower = 0;
     this.resetUpgrades();
   }
 
@@ -19,32 +20,28 @@ export class Player {
     this.weaponUnlocked = false;
     this.speedLevel = 1;
     this.speedMultiplier = 1;
+    this.accelerationMultiplier = 1;
     this.projectileSpeed = 720;
     this.fireRate = 0.34;
     this.shield = 0;
   }
 
   update(dt, input, bounds) {
-    const axis = input.axis();
-    const keyboardActive = Math.abs(axis.x) + Math.abs(axis.y) > 0;
-    const acceleration = 1420 * this.speedMultiplier;
-    const maxSpeed = 720 * this.speedMultiplier;
-    const damping = Math.pow(0.0028, dt);
+    const controls = input.flightControls();
+    const acceleration = 880 * this.accelerationMultiplier;
+    const reverseAcceleration = 520 * this.accelerationMultiplier;
+    const maxSpeed = 600 * this.speedMultiplier;
+    const damping = controls.thrust || controls.reverse ? Math.pow(0.012, dt) : Math.pow(0.028, dt);
+    const rotationSpeed = 3.6;
 
-    this.vx += axis.x * acceleration * dt;
-    this.vy += axis.y * acceleration * dt;
+    this.rotation += controls.rotation * rotationSpeed * dt;
 
-    if (!keyboardActive && input.pointer.active) {
-      const dx = input.pointer.x - this.x;
-      const dy = input.pointer.y - this.y;
-      const distance = Math.hypot(dx, dy);
+    const forwardX = Math.sin(this.rotation);
+    const forwardY = -Math.cos(this.rotation);
+    const thrustForce = controls.thrust * acceleration - controls.reverse * reverseAcceleration;
 
-      if (distance > 16) {
-        const pull = Math.min(1, distance / 260);
-        this.vx += (dx / distance) * acceleration * 0.54 * pull * dt;
-        this.vy += (dy / distance) * acceleration * 0.54 * pull * dt;
-      }
-    }
+    this.vx += forwardX * thrustForce * dt;
+    this.vy += forwardY * thrustForce * dt;
 
     this.vx *= damping;
     this.vy *= damping;
@@ -61,13 +58,13 @@ export class Player {
     this.x = clamp(this.x, 28, bounds.width - 28);
     this.y = clamp(this.y, 34, bounds.height - 34);
 
-    const targetRotation = clamp(this.vx * 0.0034, -0.68, 0.68);
-    this.rotation += (targetRotation - this.rotation) * Math.min(1, dt * 13);
+    this.rotation = normalizeAngle(this.rotation);
+    this.thrustPower += ((controls.thrust || controls.reverse ? Math.abs(thrustForce) / acceleration : 0) - this.thrustPower) * Math.min(1, dt * 12);
     this.enginePulse += dt * (18 + speed * 0.018);
     this.invulnerable = Math.max(0, this.invulnerable - dt);
     this.shield = Math.max(0, this.shield - dt);
 
-    const drain = (keyboardActive || input.pointer.active) ? 2.25 : -2.4;
+    const drain = controls.active ? 2.25 : -2.4;
     this.energy = clamp(this.energy - drain * dt, 0, this.maxEnergy);
   }
 
@@ -102,7 +99,7 @@ export class Player {
 
   drawEngine(ctx) {
     const speed = Math.hypot(this.vx, this.vy);
-    const flameLength = 30 + Math.sin(this.enginePulse) * 7 + Math.min(24, speed * 0.045);
+    const flameLength = 18 + this.thrustPower * 26 + Math.sin(this.enginePulse) * 5 + Math.min(18, speed * 0.03);
     const gradient = ctx.createLinearGradient(0, 20, 0, 20 + flameLength);
     gradient.addColorStop(0, "rgba(255,255,255,0.95)");
     gradient.addColorStop(0.25, "rgba(68,247,255,0.72)");
@@ -167,4 +164,9 @@ export class Player {
     ctx.stroke();
     ctx.restore();
   }
+}
+
+function normalizeAngle(angle) {
+  const full = Math.PI * 2;
+  return ((angle % full) + full) % full;
 }

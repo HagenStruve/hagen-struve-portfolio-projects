@@ -25,6 +25,7 @@ export class ParticleSystem {
   }
 
   emitThruster(player, dt) {
+    if (player.thrustPower <= 0.05) return;
     const speed = Math.hypot(player.vx, player.vy);
     const threshold = speed > 460 ? 0.010 : 0.018;
     this.thrusterClock += dt;
@@ -33,12 +34,14 @@ export class ParticleSystem {
 
     const backX = player.x - Math.sin(player.rotation) * 18;
     const backY = player.y + Math.cos(player.rotation) * 24;
+    const backVx = -Math.sin(player.rotation);
+    const backVy = Math.cos(player.rotation);
     const life = randomRange(0.22, 0.42);
     this.particles.push({
       x: backX + randomRange(-7, 7),
       y: backY + randomRange(-2, 8),
-      vx: randomRange(-42, 42) - player.vx * 0.1,
-      vy: randomRange(92, 178) - player.vy * 0.06,
+      vx: backVx * randomRange(92, 178) + randomRange(-30, 30) - player.vx * 0.06,
+      vy: backVy * randomRange(92, 178) + randomRange(-30, 30) - player.vy * 0.06,
       radius: randomRange(1.3, speed > 460 ? 4.8 : 3.5),
       life,
       maxLife: life,
