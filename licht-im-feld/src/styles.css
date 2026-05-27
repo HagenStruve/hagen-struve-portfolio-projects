@@ -386,6 +386,32 @@ button {
   backdrop-filter: blur(28px);
 }
 
+.cinematic-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.32) rgba(255,255,255,.06);
+}
+
+.cinematic-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cinematic-scroll::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(0,0,0,.18);
+}
+
+.cinematic-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(0,0,0,.18);
+  border-radius: 999px;
+  background: rgba(255,255,255,.28);
+  background-clip: padding-box;
+}
+
+.cinematic-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,.42);
+  background-clip: padding-box;
+}
+
 .chapter-kicker {
   display: flex;
   align-items: center;

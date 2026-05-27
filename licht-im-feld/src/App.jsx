@@ -387,7 +387,7 @@ export default function JesusJourneyExperience() {
               exit={{ opacity: 0, y: -40, scale: 1.03, filter: "blur(18px)" }}
               transition={{ duration: 0.9, ease: "easeOut" }}
               whileHover={{ y: -2 }}
-              className="text-card"
+              className="text-card cinematic-scroll"
             >
               <div className="chapter-kicker">
                 <span className="kicker-icon">
