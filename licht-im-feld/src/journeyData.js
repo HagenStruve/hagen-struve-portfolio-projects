@@ -128,12 +128,12 @@ export const sceneThemes = {
 };
 
 export const backgroundImages = {
-  ruhe: "/images/stille.webp",
-  verloren: "/images/weg.webp",
-  schuld: "/images/schuld.webp",
-  kreuz: "/images/kreuz.webp",
-  neu: "/images/neu.webp",
-  antwort: "/images/antwort.webp",
+  ruhe: "./images/stille.webp",
+  verloren: "./images/weg.webp",
+  schuld: "./images/schuld.webp",
+  kreuz: "./images/kreuz.webp",
+  neu: "./images/neu.webp",
+  antwort: "./images/antwort.webp",
 };
 
 export function validateJourneyConfig() {

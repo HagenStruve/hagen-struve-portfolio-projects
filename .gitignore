@@ -2,5 +2,9 @@
 Thumbs.db
 node_modules
 dist
+!rechnungsprogramm/dist/
+!rechnungsprogramm/dist/**
+!licht-im-feld/dist/
+!licht-im-feld/dist/**
 build
 .vscode/settings.json
