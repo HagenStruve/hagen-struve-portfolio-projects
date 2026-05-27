@@ -359,11 +359,11 @@ button {
   position: relative;
   z-index: 30;
   max-width: 72rem;
-  min-height: calc(100dvh - 92px);
+  min-height: calc(100dvh - 88px);
   margin: 0 auto;
   display: flex;
   align-items: center;
-  padding: 1.5rem 2rem 9rem;
+  padding: 1.1rem 2rem 7.8rem;
 }
 
 .content-grid {
@@ -378,7 +378,7 @@ button {
   border: 1px solid rgba(255,255,255,.10);
   border-radius: 2.4rem;
   background: rgba(0,0,0,.20);
-  padding: 2.5rem;
+  padding: 2.25rem;
   box-shadow: 0 0 80px rgba(0,0,0,.45);
   backdrop-filter: blur(28px);
 }
@@ -387,7 +387,7 @@ button {
   display: flex;
   align-items: center;
   gap: .75rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.35rem;
   color: rgba(255,255,255,.70);
 }
 
@@ -420,7 +420,7 @@ button {
 
 .chapter-text {
   max-width: 42rem;
-  margin: 1.5rem 0 0;
+  margin: 1.25rem 0 0;
   font-size: clamp(1.05rem, 2vw, 1.25rem);
   line-height: 1.75;
   color: rgba(255,255,255,.82);
@@ -470,7 +470,7 @@ button {
 }
 
 .answer-box {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   padding: 1.5rem;
   text-align: center;
   box-shadow: 0 0 70px rgba(255,255,255,.08);
@@ -484,7 +484,7 @@ button {
 
 .answer-line {
   width: 10rem;
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.60), transparent);
 }
 
@@ -579,14 +579,14 @@ button {
 .chapter-nav {
   position: fixed;
   inset-inline: 0;
-  bottom: 1.25rem;
+  bottom: .85rem;
   z-index: 40;
   width: min(92vw, 760px);
   margin: auto;
   border-radius: 2rem;
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(0,0,0,.35);
-  padding: .75rem;
+  padding: .65rem;
   box-shadow: 0 0 80px rgba(0,0,0,.45);
   backdrop-filter: blur(28px);
 }
@@ -617,7 +617,7 @@ button {
   justify-content: center;
   border: 0;
   border-radius: 999px;
-  padding: .55rem;
+  padding: .5rem;
   background: transparent;
   color: rgba(255,255,255,.55);
   cursor: pointer;
@@ -728,6 +728,79 @@ button {
   .ghost-button {
     flex: 1 1 auto;
     justify-content: center;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 820px) {
+  .topbar {
+    padding-block: .85rem;
+  }
+
+  .content-shell {
+    min-height: calc(100dvh - 72px);
+    padding-top: .35rem;
+    padding-bottom: 6.6rem;
+  }
+
+  .content-grid {
+    gap: 1.5rem;
+  }
+
+  .text-card {
+    padding: 1.75rem;
+    border-radius: 2rem;
+  }
+
+  .chapter-kicker {
+    margin-bottom: 1rem;
+  }
+
+  .kicker-icon {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+
+  .text-card h1 {
+    font-size: clamp(2rem, 4.25vw, 3.35rem);
+  }
+
+  .chapter-text {
+    margin-top: 1rem;
+    font-size: clamp(1rem, 1.6vw, 1.12rem);
+    line-height: 1.65;
+  }
+
+  .verse-card {
+    margin-top: 1.15rem;
+    padding: 1.1rem;
+  }
+
+  .verse-card p {
+    font-size: 1.08rem;
+    line-height: 1.55;
+  }
+
+  .actions {
+    margin-top: 1.15rem;
+    gap: .55rem;
+  }
+
+  .action-hint {
+    padding-bottom: .15rem;
+  }
+
+  .orb-column {
+    min-height: 27rem;
+  }
+
+  .orb {
+    width: 17rem;
+    height: 17rem;
+  }
+
+  .chapter-nav {
+    bottom: .55rem;
+    padding: .55rem;
   }
 }
 
