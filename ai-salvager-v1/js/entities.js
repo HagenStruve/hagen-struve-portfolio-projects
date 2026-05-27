@@ -73,7 +73,7 @@ export class Fragment {
 }
 
 export class Asteroid {
-  constructor(bounds, speedMultiplier = 1) {
+  constructor(bounds, speedMultiplier = 1, player = null) {
     const roll = Math.random();
     const variant = roll > 0.72 ? "small-fast" : roll > 0.34 ? "medium" : "large-slow";
     const radius = variant === "small-fast"
@@ -88,6 +88,14 @@ export class Asteroid {
       ? (Math.random() > 0.5 ? bounds.width + radius : -radius)
       : randomRange(radius, bounds.width - radius);
     this.y = fromSide ? randomRange(60, bounds.height * 0.52) : -radius;
+
+    if (player && !fromSide) {
+      let attempts = 0;
+      while (Math.abs(this.x - player.x) < 86 && attempts < 4) {
+        this.x = randomRange(radius, bounds.width - radius);
+        attempts += 1;
+      }
+    }
     const sideDrift = variant === "small-fast" ? randomRange(96, 170) : randomRange(58, 128);
     const topDrift = variant === "large-slow" ? randomRange(-42, 42) : randomRange(-82, 82);
     const verticalSpeed = variant === "small-fast"

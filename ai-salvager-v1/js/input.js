@@ -2,6 +2,12 @@ export class Input {
   constructor(canvas) {
     this.keys = new Set();
     this.fireQueued = false;
+    this.mobile = {
+      left: false,
+      right: false,
+      thrust: false,
+      reverse: false,
+    };
     this.pointer = {
       active: false,
       pressed: false,
@@ -65,10 +71,10 @@ export class Input {
   }
 
   flightControls() {
-    const left = this.keys.has("a") || this.keys.has("arrowleft");
-    const right = this.keys.has("d") || this.keys.has("arrowright");
-    const thrust = this.keys.has("w") || this.keys.has("arrowup");
-    const reverse = this.keys.has("s") || this.keys.has("arrowdown");
+    const left = this.keys.has("a") || this.keys.has("arrowleft") || this.mobile.left;
+    const right = this.keys.has("d") || this.keys.has("arrowright") || this.mobile.right;
+    const thrust = this.keys.has("w") || this.keys.has("arrowup") || this.mobile.thrust;
+    const reverse = this.keys.has("s") || this.keys.has("arrowdown") || this.mobile.reverse;
 
     return {
       rotation: (right ? 1 : 0) - (left ? 1 : 0),
@@ -80,6 +86,26 @@ export class Input {
 
   queueFire() {
     this.fireQueued = true;
+  }
+
+  setMobileControl(control, active) {
+    if (control in this.mobile) this.mobile[control] = active;
+  }
+
+  bindHoldButton(button, control) {
+    const setActive = (event) => {
+      event.preventDefault();
+      this.setMobileControl(control, true);
+    };
+    const clearActive = (event) => {
+      event.preventDefault();
+      this.setMobileControl(control, false);
+    };
+
+    button.addEventListener("pointerdown", setActive);
+    button.addEventListener("pointerup", clearActive);
+    button.addEventListener("pointercancel", clearActive);
+    button.addEventListener("pointerleave", clearActive);
   }
 
   consumeFire() {

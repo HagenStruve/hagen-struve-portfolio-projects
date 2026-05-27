@@ -3,8 +3,15 @@ import { createEnemyShot } from "./projectiles.js";
 const randomRange = (min, max) => min + Math.random() * (max - min);
 
 export class Drone {
-  constructor(bounds, settings) {
+  constructor(bounds, settings, player = null) {
     this.x = randomRange(70, bounds.width - 70);
+    if (player) {
+      let attempts = 0;
+      while (Math.abs(this.x - player.x) < 92 && attempts < 4) {
+        this.x = randomRange(70, bounds.width - 70);
+        attempts += 1;
+      }
+    }
     this.y = -42;
     this.vx = randomRange(-24, 24);
     this.vy = randomRange(36, 64);

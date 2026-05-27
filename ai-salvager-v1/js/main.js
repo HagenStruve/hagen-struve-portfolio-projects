@@ -29,6 +29,11 @@ const finalTime = document.querySelector("#finalTime");
 const collectFlash = document.querySelector("#collectFlash");
 const damageFlash = document.querySelector("#damageFlash");
 const fireButton = document.querySelector("#fireButton");
+const mobileControls = document.querySelector("#mobileControls");
+const turnLeftButton = document.querySelector("#turnLeftButton");
+const turnRightButton = document.querySelector("#turnRightButton");
+const thrustButton = document.querySelector("#thrustButton");
+const brakeButton = document.querySelector("#brakeButton");
 const energyPanel = energyFill.closest(".hud__panel");
 const scorePanel = scoreText.closest(".hud__panel");
 
@@ -73,6 +78,7 @@ function setState(nextState) {
   pauseScreen.classList.toggle("screen--active", nextState === "pause");
   gameOverScreen.classList.toggle("screen--active", nextState === "gameover");
   hud.classList.toggle("hud--hidden", nextState !== "playing");
+  mobileControls.classList.toggle("mobile-controls--active", nextState === "playing");
 }
 
 function startGame() {
@@ -121,6 +127,10 @@ fireButton.addEventListener("pointerdown", (event) => {
   event.preventDefault();
   input.queueFire();
 });
+input.bindHoldButton(turnLeftButton, "left");
+input.bindHoldButton(turnRightButton, "right");
+input.bindHoldButton(thrustButton, "thrust");
+input.bindHoldButton(brakeButton, "reverse");
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") togglePause();
@@ -155,13 +165,13 @@ function maybeDropPart(x, y, source = "asteroid") {
 
 function spawnAsteroid() {
   if (game.asteroids.length >= game.difficulty.maxAsteroids) return;
-  game.asteroids.push(new Asteroid(renderer, game.difficulty.asteroidSpeedMultiplier));
+  game.asteroids.push(new Asteroid(renderer, game.difficulty.asteroidSpeedMultiplier, player));
 }
 
 function spawnEnemy() {
   const settings = getCombatDifficulty();
   if (settings.maxEnemies === 0 || game.enemies.length >= settings.maxEnemies) return;
-  game.enemies.push(new Drone(renderer, settings));
+  game.enemies.push(new Drone(renderer, settings, player));
 }
 
 function addScore(amount) {
@@ -199,11 +209,12 @@ function endGame() {
 
 function getDifficulty() {
   const level = game.elapsed >= 60 ? 4 : game.elapsed >= 40 ? 3 : game.elapsed >= 20 ? 2 : 1;
+  const smallScreen = Math.min(renderer.width, renderer.height) < 560;
   return {
     level,
-    spawnInterval: Math.max(0.58, 1.62 - (level - 1) * 0.24 - game.elapsed * 0.006),
-    asteroidSpeedMultiplier: 1 + (level - 1) * 0.18 + Math.min(0.28, game.elapsed * 0.003),
-    maxAsteroids: Math.min(10, 5 + level),
+    spawnInterval: Math.max(smallScreen ? 0.72 : 0.58, 1.62 - (level - 1) * 0.24 - game.elapsed * 0.006),
+    asteroidSpeedMultiplier: (1 + (level - 1) * 0.18 + Math.min(0.28, game.elapsed * 0.003)) * (smallScreen ? 0.9 : 1),
+    maxAsteroids: Math.min(smallScreen ? 7 : 10, 5 + level),
   };
 }
 
@@ -214,18 +225,26 @@ function getCombatDifficulty() {
   }
 
   if (score < 2000) {
-    return { scoreLevel: score, maxEnemies: 1, spawnInterval: 5.8, fireInterval: 2.45, aggression: 0.48, projectileSpeed: 240 };
+    return { scoreLevel: score, maxEnemies: 1, spawnInterval: 5.8, fireInterval: 2.45, aggression: 0.48, projectileSpeed: mobileSpeed(240) };
   }
 
   if (score < 3500) {
-    return { scoreLevel: score, maxEnemies: 1, spawnInterval: 4.6, fireInterval: 1.9, aggression: 0.58, projectileSpeed: 285 };
+    return { scoreLevel: score, maxEnemies: 1, spawnInterval: 4.6, fireInterval: 1.9, aggression: 0.58, projectileSpeed: mobileSpeed(285) };
   }
 
   if (score < 5000) {
-    return { scoreLevel: score, maxEnemies: 2, spawnInterval: 4.2, fireInterval: 1.55, aggression: 0.68, projectileSpeed: 330 };
+    return { scoreLevel: score, maxEnemies: isSmallScreen() ? 1 : 2, spawnInterval: 4.2, fireInterval: 1.55, aggression: 0.68, projectileSpeed: mobileSpeed(330) };
   }
 
-  return { scoreLevel: score, maxEnemies: 3, spawnInterval: 3.6, fireInterval: 1.2, aggression: 0.82, projectileSpeed: 390 };
+  return { scoreLevel: score, maxEnemies: isSmallScreen() ? 2 : 3, spawnInterval: 3.6, fireInterval: 1.2, aggression: 0.82, projectileSpeed: mobileSpeed(390) };
+}
+
+function isSmallScreen() {
+  return Math.min(renderer.width, renderer.height) < 560;
+}
+
+function mobileSpeed(value) {
+  return isSmallScreen() ? value * 0.88 : value;
 }
 
 function update(dt) {

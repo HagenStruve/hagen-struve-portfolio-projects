@@ -8,13 +8,14 @@ export class Renderer {
 
     this.resize();
     window.addEventListener("resize", () => this.resize());
+    window.visualViewport?.addEventListener("resize", () => this.resize());
     window.addEventListener("orientationchange", () => setTimeout(() => this.resize(), 120));
   }
 
   resize() {
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.width = Math.floor(window.innerWidth);
-    this.height = Math.floor(window.innerHeight);
+    this.width = Math.floor(window.visualViewport?.width || window.innerWidth);
+    this.height = Math.floor(window.visualViewport?.height || window.innerHeight);
 
     this.canvas.width = Math.floor(this.width * this.dpr);
     this.canvas.height = Math.floor(this.height * this.dpr);
