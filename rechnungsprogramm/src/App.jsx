@@ -85,6 +85,7 @@ const createDefaultCompanySettings = () => ({
   companyAddress: "",
   companyEmail: "",
   companyPhone: "",
+  taxRate: 19,
 });
 
 const applyCompanySettingsToInvoice = (invoice, companySettings) => ({
@@ -94,6 +95,7 @@ const applyCompanySettingsToInvoice = (invoice, companySettings) => ({
   companyAddress: companySettings.companyAddress,
   companyEmail: companySettings.companyEmail,
   companyPhone: companySettings.companyPhone,
+  taxRate: Number(companySettings.taxRate ?? 19),
 });
 
 const createDefaultInvoice = (companySettings = createDefaultCompanySettings(), invoiceSettings = createDefaultInvoiceSettings()) => ({
@@ -109,7 +111,7 @@ const createDefaultInvoice = (companySettings = createDefaultCompanySettings(), 
   invoiceNumber: invoiceSettings.nextInvoiceNumber,
   invoiceDate: new Date().toISOString().slice(0, 10),
   dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-  taxRate: 19,
+  taxRate: Number(companySettings.taxRate ?? 19),
   notes: "Vielen Dank für Ihren Auftrag.",
   items: [emptyItem()],
 });
@@ -213,6 +215,7 @@ function normalizeCompanySettings(raw) {
     companyAddress: typeof source.companyAddress === "string" ? source.companyAddress : "",
     companyEmail: typeof source.companyEmail === "string" ? source.companyEmail : "",
     companyPhone: typeof source.companyPhone === "string" ? source.companyPhone : "",
+    taxRate: Number.isFinite(Number(source.taxRate)) ? Number(source.taxRate) : 19,
   };
 }
 
@@ -669,6 +672,7 @@ export default function Rechnungsprogramm() {
       companyAddress: companyForm.companyAddress.trim(),
       companyEmail: companyForm.companyEmail.trim(),
       companyPhone: companyForm.companyPhone.trim(),
+      taxRate: Number(companyForm.taxRate ?? 19),
     };
 
     const shouldActivate = !editingCompanyId || companySettings.id === profile.id;
@@ -1212,6 +1216,7 @@ export default function Rechnungsprogramm() {
                 <Field label="Firmenname"><Input placeholder="z. B. MaschinenLog" value={companyForm.companyName} onChange={(e) => updateCompanyField("companyName", e.target.value)} /></Field>
                 <Field label="E-Mail"><Input placeholder="name@example.de" value={companyForm.companyEmail} onChange={(e) => updateCompanyField("companyEmail", e.target.value)} /></Field>
                 <Field label="Telefon"><Input placeholder="+49 ..." value={companyForm.companyPhone} onChange={(e) => updateCompanyField("companyPhone", e.target.value)} /></Field>
+                <Field label="MwSt. (%)"><Input type="number" min="0" step="0.1" value={companyForm.taxRate} onChange={(e) => updateCompanyField("taxRate", e.target.value)} /></Field>
                 <div className="grid gap-2 md:col-span-2">
                   <Label>Adresse</Label>
                   <Textarea placeholder={"Straße und Hausnummer\nPLZ Ort"} value={companyForm.companyAddress} onChange={(e) => updateCompanyField("companyAddress", e.target.value)} rows={4} />
@@ -1239,6 +1244,7 @@ export default function Rechnungsprogramm() {
                         <p className="whitespace-pre-line break-words text-sm text-slate-600">{profile.companyAddress || "Keine Adresse"}</p>
                         <p className="mt-1 flex items-center gap-2 break-words text-sm text-slate-600"><Mail className="h-4 w-4" />{profile.companyEmail || "Keine E-Mail"}</p>
                         <p className="break-words text-sm text-slate-600">{profile.companyPhone || "Keine Telefonnummer"}</p>
+                        <p className="text-sm text-slate-600">MwSt.: {Number(profile.taxRate ?? 19).toLocaleString("de-DE")}%</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -1478,8 +1484,7 @@ export default function Rechnungsprogramm() {
 
           <Card className="rounded-2xl shadow-sm">
             <CardHeader><CardTitle>Zusatzinfos</CardTitle></CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-[180px_1fr]">
-              <Field label="MwSt. (%)"><Input type="number" min="0" step="0.1" value={invoice.taxRate} onChange={(e) => updateField("taxRate", e.target.value)} /></Field>
+            <CardContent className="grid gap-4">
               <div className="grid gap-2">
                 <Label>Hinweis</Label>
                 <Textarea value={invoice.notes} onChange={(e) => updateField("notes", e.target.value)} rows={4} />
