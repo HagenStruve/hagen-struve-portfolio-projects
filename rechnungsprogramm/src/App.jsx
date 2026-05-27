@@ -54,11 +54,23 @@ const emptyService = () => ({
   fuelPerHour: 0,
 });
 
-const createDefaultInvoice = () => ({
-  companyName: "Meine Firma GmbH",
-  companyAddress: "Musterstraße 1\n12345 Musterstadt",
-  companyEmail: "info@meinefirma.de",
-  companyPhone: "+49 123 456789",
+const createDefaultCompanySettings = () => ({
+  companyName: "",
+  companyAddress: "",
+  companyEmail: "",
+  companyPhone: "",
+});
+
+const applyCompanySettingsToInvoice = (invoice, companySettings) => ({
+  ...invoice,
+  companyName: companySettings.companyName,
+  companyAddress: companySettings.companyAddress,
+  companyEmail: companySettings.companyEmail,
+  companyPhone: companySettings.companyPhone,
+});
+
+const createDefaultInvoice = (companySettings = createDefaultCompanySettings()) => ({
+  ...companySettings,
   customerId: "",
   customerName: "",
   customerAddress: "",
@@ -92,6 +104,7 @@ function createAppState(overrides = {}) {
     customers: createDefaultCustomers(),
     services: createDefaultServices(),
     serviceHours: {},
+    companySettings: createDefaultCompanySettings(),
     ...overrides,
   };
 }
@@ -103,7 +116,10 @@ function isPlainObject(value) {
 function normalizeAppState(raw) {
   if (!isPlainObject(raw)) return createAppState();
 
-  const invoice = isPlainObject(raw.invoice) ? raw.invoice : createDefaultInvoice();
+  const companySettings = normalizeCompanySettings(raw);
+  const invoice = isPlainObject(raw.invoice)
+    ? applyCompanySettingsToInvoice({ ...createDefaultInvoice(companySettings), ...raw.invoice }, companySettings)
+    : createDefaultInvoice(companySettings);
   const customers = Array.isArray(raw.customers) ? raw.customers : createDefaultCustomers();
   const services = Array.isArray(raw.services) ? raw.services : createDefaultServices();
   const serviceHours = isPlainObject(raw.serviceHours) ? raw.serviceHours : {};
@@ -117,7 +133,25 @@ function normalizeAppState(raw) {
     customers,
     services,
     serviceHours,
+    companySettings,
   });
+}
+
+function normalizeCompanySettings(raw) {
+  const source = isPlainObject(raw.companySettings)
+    ? raw.companySettings
+    : isPlainObject(raw.settings)
+      ? raw.settings
+      : isPlainObject(raw.invoice)
+        ? raw.invoice
+        : {};
+
+  return {
+    companyName: typeof source.companyName === "string" ? source.companyName : "",
+    companyAddress: typeof source.companyAddress === "string" ? source.companyAddress : "",
+    companyEmail: typeof source.companyEmail === "string" ? source.companyEmail : "",
+    companyPhone: typeof source.companyPhone === "string" ? source.companyPhone : "",
+  };
 }
 
 function createInvoiceSnapshot(invoice) {
@@ -268,7 +302,11 @@ function buildInvoiceHtml(invoice, subtotal, totalFuel, taxAmount, total) {
 function runInlineTests() {
   console.assert(currency(85) === "85,00 €", "currency() sollte Euro im deutschen Format ausgeben");
   console.assert(formatFuel(6.5) === "6,5 l", "formatFuel() sollte Liter korrekt formatieren");
-  console.assert(createDefaultInvoice().companyAddress.includes("\n"), "companyAddress sollte einen Zeilenumbruch enthalten");
+  console.assert(createDefaultInvoice().companyAddress === "", "Firmendaten sollten leer starten");
+  console.assert(
+    normalizeAppState({ companySettings: { companyName: "Testfirma", companyEmail: "test@example.test" } }).invoice.companyName === "Testfirma",
+    "Firmendaten sollten in die aktuelle Rechnung übernommen werden"
+  );
 
   const testService = { id: "1", name: "Test", pricePerHour: 99, fuelPerHour: 3.5 };
   const newItem = createInvoiceItemFromService(testService, 2.5);
@@ -306,6 +344,7 @@ const SummaryRow = ({ label, value, strong = false }) => (
 export default function Rechnungsprogramm() {
   const [invoice, setInvoice] = useState(() => createDefaultInvoice());
   const [invoices, setInvoices] = useState([]);
+  const [companySettings, setCompanySettings] = useState(() => createDefaultCompanySettings());
   const [customers, setCustomers] = useState(() => createDefaultCustomers());
   const [services, setServices] = useState(() => createDefaultServices());
   const [newCustomer, setNewCustomer] = useState(() => emptyCustomer());
@@ -342,6 +381,7 @@ export default function Rechnungsprogramm() {
           const next = normalizeAppState(restored);
           setInvoice(next.invoice);
           setInvoices(next.invoices);
+          setCompanySettings(next.companySettings);
           setCustomers(next.customers.length ? next.customers : createDefaultCustomers());
           setServices(next.services.length ? next.services : createDefaultServices());
           setServiceHours(next.serviceHours);
@@ -365,12 +405,12 @@ export default function Rechnungsprogramm() {
 
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
-      saveAppState({ invoice, invoices, customers, services, serviceHours }).catch((error) => {
+      saveAppState({ invoice, invoices, customers, services, serviceHours, companySettings }).catch((error) => {
         console.error("Automatisches Speichern fehlgeschlagen", error);
         showSaveMessage("Automatisches Speichern fehlgeschlagen.");
       });
     }, 350);
-  }, [storageReady, invoice, invoices, customers, services, serviceHours]);
+  }, [storageReady, invoice, invoices, customers, services, serviceHours, companySettings]);
 
   useEffect(() => {
     return () => {
@@ -393,6 +433,11 @@ export default function Rechnungsprogramm() {
   const total = useMemo(() => subtotal + taxAmount, [subtotal, taxAmount]);
 
   const updateField = (field, value) => setInvoice((prev) => ({ ...prev, [field]: value }));
+
+  const updateCompanyField = (field, value) => {
+    setCompanySettings((prev) => ({ ...prev, [field]: value }));
+    setInvoice((prev) => ({ ...prev, [field]: value }));
+  };
 
   const updateItem = (id, field, value) => {
     setInvoice((prev) => ({
@@ -502,7 +547,7 @@ export default function Rechnungsprogramm() {
 
   const saveData = async () => {
     try {
-      await saveAppState({ invoice, invoices, customers, services, serviceHours });
+      await saveAppState({ invoice, invoices, customers, services, serviceHours, companySettings });
       showSaveMessage("Daten lokal in IndexedDB gespeichert.");
     } catch (error) {
       console.error("Speichern fehlgeschlagen", error);
@@ -521,7 +566,7 @@ export default function Rechnungsprogramm() {
   };
 
   const openSavedInvoice = (entry) => {
-    setInvoice(entry.invoice);
+    setInvoice(applyCompanySettingsToInvoice(entry.invoice, companySettings));
     showSaveMessage("Rechnung geöffnet.");
   };
 
@@ -537,6 +582,8 @@ export default function Rechnungsprogramm() {
         exportedAt: new Date().toISOString(),
         invoice,
         invoices,
+        companySettings,
+        settings: companySettings,
         customers,
         services,
         serviceHours,
@@ -574,13 +621,17 @@ export default function Rechnungsprogramm() {
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      if (!isPlainObject(parsed) || (!parsed.invoice && !Array.isArray(parsed.customers) && !Array.isArray(parsed.services))) {
+      if (
+        !isPlainObject(parsed) ||
+        (!parsed.invoice && !parsed.companySettings && !Array.isArray(parsed.customers) && !Array.isArray(parsed.services))
+      ) {
         throw new Error("Ungültiges Backup-Format.");
       }
 
       const imported = normalizeAppState(parsed);
       setInvoice(imported.invoice);
       setInvoices(imported.invoices);
+      setCompanySettings(imported.companySettings);
       setCustomers(imported.customers.length ? imported.customers : createDefaultCustomers());
       setServices(imported.services.length ? imported.services : createDefaultServices());
       setServiceHours(imported.serviceHours);
@@ -619,7 +670,9 @@ export default function Rechnungsprogramm() {
     } catch (error) {
       console.error("Zurücksetzen fehlgeschlagen", error);
     }
-    setInvoice(createDefaultInvoice());
+    const defaultCompanySettings = createDefaultCompanySettings();
+    setCompanySettings(defaultCompanySettings);
+    setInvoice(createDefaultInvoice(defaultCompanySettings));
     setInvoices([]);
     setCustomers(createDefaultCustomers());
     setServices(createDefaultServices());
@@ -755,12 +808,12 @@ export default function Rechnungsprogramm() {
               <CardTitle>Eigene Firmendaten</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
-              <Field label="Firmenname"><Input value={invoice.companyName} onChange={(e) => updateField("companyName", e.target.value)} /></Field>
-              <Field label="E-Mail"><Input value={invoice.companyEmail} onChange={(e) => updateField("companyEmail", e.target.value)} /></Field>
-              <Field label="Telefon"><Input value={invoice.companyPhone} onChange={(e) => updateField("companyPhone", e.target.value)} /></Field>
+              <Field label="Firmenname"><Input value={companySettings.companyName} onChange={(e) => updateCompanyField("companyName", e.target.value)} /></Field>
+              <Field label="E-Mail"><Input value={companySettings.companyEmail} onChange={(e) => updateCompanyField("companyEmail", e.target.value)} /></Field>
+              <Field label="Telefon"><Input value={companySettings.companyPhone} onChange={(e) => updateCompanyField("companyPhone", e.target.value)} /></Field>
               <div className="grid gap-2 md:col-span-2">
                 <Label>Adresse</Label>
-                <Textarea value={invoice.companyAddress} onChange={(e) => updateField("companyAddress", e.target.value)} rows={4} />
+                <Textarea value={companySettings.companyAddress} onChange={(e) => updateCompanyField("companyAddress", e.target.value)} rows={4} />
               </div>
             </CardContent>
           </Card>
