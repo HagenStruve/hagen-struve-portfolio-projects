@@ -30,6 +30,10 @@ const ENTRY_TYPES = {
   fixed: "Festpreis",
   quantity: "Ware/Menge",
 };
+const PRICE_MODES = {
+  net: "Preis ist Netto",
+  gross: "Preis ist Brutto",
+};
 
 const createId = () =>
   typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -45,6 +49,7 @@ const emptyItem = () => ({
   unit: "h",
   hours: 1,
   unitPrice: 0,
+  priceMode: "net",
   fuelPerUnit: 0,
   fuelPerHour: 0,
 });
@@ -63,8 +68,13 @@ const emptyService = () => ({
   unit: "h",
   pricePerUnit: 0,
   pricePerHour: 0,
+  priceMode: "net",
   fuelPerUnit: 0,
   fuelPerHour: 0,
+});
+
+const createDefaultInvoiceSettings = () => ({
+  nextInvoiceNumber: `RE-${new Date().getFullYear()}-001`,
 });
 
 const createDefaultCompanySettings = () => ({
@@ -84,7 +94,7 @@ const applyCompanySettingsToInvoice = (invoice, companySettings) => ({
   companyPhone: companySettings.companyPhone,
 });
 
-const createDefaultInvoice = (companySettings = createDefaultCompanySettings()) => ({
+const createDefaultInvoice = (companySettings = createDefaultCompanySettings(), invoiceSettings = createDefaultInvoiceSettings()) => ({
   companyId: companySettings.id,
   companyName: companySettings.companyName,
   companyAddress: companySettings.companyAddress,
@@ -94,7 +104,7 @@ const createDefaultInvoice = (companySettings = createDefaultCompanySettings()) 
   customerName: "",
   customerAddress: "",
   customerEmail: "",
-  invoiceNumber: `RE-${new Date().getFullYear()}-001`,
+  invoiceNumber: invoiceSettings.nextInvoiceNumber,
   invoiceDate: new Date().toISOString().slice(0, 10),
   dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   taxRate: 19,
@@ -125,6 +135,7 @@ function createAppState(overrides = {}) {
     serviceHours: {},
     companySettings: createDefaultCompanySettings(),
     companyProfiles: [],
+    invoiceSettings: createDefaultInvoiceSettings(),
     ...overrides,
   };
 }
@@ -137,9 +148,10 @@ function normalizeAppState(raw) {
   if (!isPlainObject(raw)) return createAppState();
 
   const companySettings = normalizeCompanySettings(raw);
+  const invoiceSettings = normalizeInvoiceSettings(raw.invoiceSettings || raw.invoice);
   const invoice = isPlainObject(raw.invoice)
-    ? applyCompanySettingsToInvoice({ ...createDefaultInvoice(companySettings), ...raw.invoice }, companySettings)
-    : createDefaultInvoice(companySettings);
+    ? applyCompanySettingsToInvoice({ ...createDefaultInvoice(companySettings, invoiceSettings), ...raw.invoice }, companySettings)
+    : createDefaultInvoice(companySettings, invoiceSettings);
   const customers = Array.isArray(raw.customers) ? raw.customers : createDefaultCustomers();
   const services = Array.isArray(raw.services) ? raw.services.map(normalizeServiceEntry) : createDefaultServices();
   const serviceHours = isPlainObject(raw.serviceHours) ? raw.serviceHours : {};
@@ -166,7 +178,22 @@ function normalizeAppState(raw) {
     serviceHours,
     companySettings,
     companyProfiles,
+    invoiceSettings,
   });
+}
+
+function normalizeInvoiceSettings(value) {
+  const source = isPlainObject(value) ? value : {};
+  const fallback = createDefaultInvoiceSettings();
+
+  return {
+    nextInvoiceNumber:
+      typeof source.nextInvoiceNumber === "string" && source.nextInvoiceNumber.trim()
+        ? source.nextInvoiceNumber.trim()
+        : typeof source.invoiceNumber === "string" && source.invoiceNumber.trim()
+          ? source.invoiceNumber.trim()
+        : fallback.nextInvoiceNumber,
+  };
 }
 
 function normalizeCompanySettings(raw) {
@@ -211,6 +238,10 @@ function normalizeEntryType(type) {
   return Object.prototype.hasOwnProperty.call(ENTRY_TYPES, type) ? type : "service";
 }
 
+function normalizePriceMode(mode) {
+  return Object.prototype.hasOwnProperty.call(PRICE_MODES, mode) ? mode : "net";
+}
+
 function normalizeServiceEntry(entry) {
   const type = normalizeEntryType(entry?.type);
   const unit = type === "service" ? "h" : type === "fixed" ? "Stück" : entry?.unit || "Stück";
@@ -224,6 +255,7 @@ function normalizeServiceEntry(entry) {
     unit,
     pricePerUnit,
     pricePerHour: type === "service" ? pricePerUnit : 0,
+    priceMode: normalizePriceMode(entry?.priceMode),
     fuelPerUnit,
     fuelPerHour: type === "service" ? fuelPerUnit : 0,
   };
@@ -234,6 +266,7 @@ function normalizeInvoiceItem(item) {
   const quantity = Number(item?.quantity ?? item?.hours ?? 1);
   const unit = item?.unit || (type === "service" ? "h" : type === "fixed" ? "Stück" : "");
   const unitPrice = Number(item?.unitPrice ?? item?.pricePerUnit ?? item?.pricePerHour ?? 0);
+  const priceMode = normalizePriceMode(item?.priceMode);
   const fuelPerUnit = type === "service" ? Number(item?.fuelPerUnit ?? item?.fuelPerHour ?? 0) : 0;
 
   return {
@@ -245,9 +278,24 @@ function normalizeInvoiceItem(item) {
     unit,
     hours: quantity,
     unitPrice,
+    priceMode,
     fuelPerUnit,
     fuelPerHour: fuelPerUnit,
   };
+}
+
+function getTaxMultiplier(taxRate) {
+  return 1 + Number(taxRate || 0) / 100;
+}
+
+function getLineNetTotal(item, taxRate) {
+  const rawTotal = Number(item.quantity ?? item.hours ?? 0) * Number(item.unitPrice || 0);
+  return normalizePriceMode(item.priceMode) === "gross" ? rawTotal / getTaxMultiplier(taxRate) : rawTotal;
+}
+
+function getLineGrossTotal(item, taxRate) {
+  const rawTotal = Number(item.quantity ?? item.hours ?? 0) * Number(item.unitPrice || 0);
+  return normalizePriceMode(item.priceMode) === "gross" ? rawTotal : rawTotal * getTaxMultiplier(taxRate);
 }
 
 function getLineTotal(item) {
@@ -256,6 +304,16 @@ function getLineTotal(item) {
 
 function getLineFuel(item) {
   return Number(item.quantity ?? item.hours ?? 0) * Number(item.fuelPerUnit ?? item.fuelPerHour ?? 0);
+}
+
+function incrementInvoiceNumber(value) {
+  const input = String(value || "").trim();
+  const match = input.match(/^(.*?)(\d+)$/);
+  if (!match) return input;
+
+  const [, prefix, numberPart] = match;
+  const nextNumber = String(Number(numberPart) + 1).padStart(numberPart.length, "0");
+  return `${prefix}${nextNumber}`;
 }
 
 function createInvoiceSnapshot(invoice) {
@@ -312,6 +370,7 @@ function createInvoiceItemFromService(service, hours = 1) {
     unit: entry.unit,
     hours: quantity,
     unitPrice: entry.pricePerUnit,
+    priceMode: entry.priceMode,
     fuelPerUnit: entry.fuelPerUnit,
     fuelPerHour: entry.fuelPerUnit,
   };
@@ -320,15 +379,16 @@ function createInvoiceItemFromService(service, hours = 1) {
 function buildInvoiceHtml(invoice, subtotal, totalFuel, taxAmount, total) {
   const rows = invoice.items
     .map((item) => {
-      const lineTotal = getLineTotal(item);
+      const lineNet = getLineNetTotal(item, invoice.taxRate);
       const lineFuel = getLineFuel(item);
+      const modeLabel = normalizePriceMode(item.priceMode) === "gross" ? "brutto vereinbart" : "netto";
       return `<tr>
         <td>${escapeHtml(item.description || "–")}</td>
         <td>${escapeHtml(item.quantity ?? item.hours)}</td>
         <td>${escapeHtml(item.unit || "")}</td>
-        <td>${currency(item.unitPrice)}</td>
+        <td>${currency(item.unitPrice)}<br><span class="muted">${modeLabel}</span></td>
         <td>${lineFuel > 0 ? formatFuel(lineFuel) : "–"}</td>
-        <td style="text-align:right">${currency(lineTotal)}</td>
+        <td style="text-align:right">${currency(lineNet)}</td>
       </tr>`;
     })
     .join("");
@@ -402,10 +462,10 @@ function buildInvoiceHtml(invoice, subtotal, totalFuel, taxAmount, total) {
   </div>
 
   <div class="summary">
-    <div class="row"><span>Zwischensumme</span><span>${currency(subtotal)}</span></div>
+    <div class="row"><span>Zwischensumme Netto</span><span>${currency(subtotal)}</span></div>
     <div class="row"><span>Gesamt Dieselverbrauch</span><span>${formatFuel(totalFuel)}</span></div>
     <div class="row"><span>MwSt. (${escapeHtml(invoice.taxRate)}%)</span><span>${currency(taxAmount)}</span></div>
-    <div class="row total"><span>Gesamt</span><span>${currency(total)}</span></div>
+    <div class="row total"><span>Gesamt Brutto</span><span>${currency(total)}</span></div>
   </div>
 
   <div class="section">
@@ -436,6 +496,9 @@ function runInlineTests() {
   console.assert(newItem.fuelPerUnit === 3.5, "Dienstleistung sollte den Dieselverbrauch übernehmen");
   console.assert(newItem.quantity === 2.5, "Neue Rechnungsposition sollte die gewählte Menge übernehmen");
   console.assert(getLineTotal(createInvoiceItemFromService({ id: "2", type: "fixed", name: "Testartikel", pricePerUnit: 2500 }, 2)) === 5000, "Festpreisartikel sollten mit Menge abrechnen");
+  console.assert(Math.round(getLineNetTotal({ quantity: 1, unitPrice: 119, priceMode: "gross" }, 19)) === 100, "119 Euro brutto sollten 100 Euro netto ergeben");
+  console.assert(incrementInvoiceNumber("RE-2026-009") === "RE-2026-010", "Rechnungsnummern sollten führende Nullen behalten");
+  console.assert(incrementInvoiceNumber("R-15") === "R-16", "Rechnungsnummern sollten am Ende hochzählen");
 
   const testInvoice = createDefaultInvoice();
   const html = buildInvoiceHtml(testInvoice, 100, 4, 19, 119);
@@ -465,6 +528,7 @@ const SummaryRow = ({ label, value, strong = false }) => (
 
 export default function Rechnungsprogramm() {
   const [invoice, setInvoice] = useState(() => createDefaultInvoice());
+  const [invoiceSettings, setInvoiceSettings] = useState(() => createDefaultInvoiceSettings());
   const [invoices, setInvoices] = useState([]);
   const [companySettings, setCompanySettings] = useState(() => createDefaultCompanySettings());
   const [companyProfiles, setCompanyProfiles] = useState([]);
@@ -503,6 +567,7 @@ export default function Rechnungsprogramm() {
         if (restored) {
           const next = normalizeAppState(restored);
           setInvoice(next.invoice);
+          setInvoiceSettings(next.invoiceSettings);
           setInvoices(next.invoices);
           setCompanySettings(next.companySettings);
           setCompanyProfiles(next.companyProfiles);
@@ -529,12 +594,12 @@ export default function Rechnungsprogramm() {
 
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
-      saveAppState({ invoice, invoices, customers, services, serviceHours, companySettings, companyProfiles }).catch((error) => {
+      saveAppState({ invoice, invoiceSettings, invoices, customers, services, serviceHours, companySettings, companyProfiles }).catch((error) => {
         console.error("Automatisches Speichern fehlgeschlagen", error);
         showSaveMessage("Automatisches Speichern fehlgeschlagen.");
       });
     }, 350);
-  }, [storageReady, invoice, invoices, customers, services, serviceHours, companySettings, companyProfiles]);
+  }, [storageReady, invoice, invoiceSettings, invoices, customers, services, serviceHours, companySettings, companyProfiles]);
 
   useEffect(() => {
     return () => {
@@ -544,8 +609,8 @@ export default function Rechnungsprogramm() {
   }, []);
 
   const subtotal = useMemo(
-    () => invoice.items.reduce((sum, item) => sum + getLineTotal(item), 0),
-    [invoice.items]
+    () => invoice.items.reduce((sum, item) => sum + getLineNetTotal(item, invoice.taxRate), 0),
+    [invoice.items, invoice.taxRate]
   );
 
   const totalFuel = useMemo(
@@ -553,10 +618,25 @@ export default function Rechnungsprogramm() {
     [invoice.items]
   );
 
-  const taxAmount = useMemo(() => subtotal * (Number(invoice.taxRate || 0) / 100), [subtotal, invoice.taxRate]);
-  const total = useMemo(() => subtotal + taxAmount, [subtotal, taxAmount]);
+  const total = useMemo(
+    () => invoice.items.reduce((sum, item) => sum + getLineGrossTotal(item, invoice.taxRate), 0),
+    [invoice.items, invoice.taxRate]
+  );
+  const taxAmount = useMemo(() => total - subtotal, [subtotal, total]);
 
   const updateField = (field, value) => setInvoice((prev) => ({ ...prev, [field]: value }));
+
+  const saveInvoiceNumberSetting = () => {
+    const nextInvoiceNumber = invoiceSettings.nextInvoiceNumber.trim() || createDefaultInvoiceSettings().nextInvoiceNumber;
+    setInvoiceSettings({ nextInvoiceNumber });
+    setInvoice((prev) => ({ ...prev, invoiceNumber: nextInvoiceNumber }));
+    showSaveMessage("Rechnungsnummer gespeichert.");
+  };
+
+  const createNextInvoice = () => {
+    setInvoice(createDefaultInvoice(companySettings, invoiceSettings));
+    showSaveMessage("Neue Rechnung vorbereitet.");
+  };
 
   const updateCompanyField = (field, value) => {
     setCompanySettings((prev) => ({ ...prev, [field]: value }));
@@ -617,6 +697,7 @@ export default function Rechnungsprogramm() {
         const next = { ...item, [field]: value };
         if (field === "quantity") next.hours = value;
         if (field === "fuelPerUnit") next.fuelPerHour = value;
+        if (field === "priceMode") next.priceMode = normalizePriceMode(value);
         if (field === "type" && value !== "service") {
           next.fuelPerUnit = 0;
           next.fuelPerHour = 0;
@@ -658,6 +739,7 @@ export default function Rechnungsprogramm() {
           description: entry.name,
           unit: entry.unit,
           unitPrice: entry.pricePerUnit,
+          priceMode: entry.priceMode,
           fuelPerUnit: entry.fuelPerUnit,
           fuelPerHour: entry.fuelPerUnit,
         };
@@ -714,6 +796,7 @@ export default function Rechnungsprogramm() {
       name: newService.name.trim(),
       unit: type === "service" ? "h" : type === "fixed" ? "Stück" : newService.unit.trim() || "Stück",
       pricePerUnit: Number(newService.pricePerUnit || newService.pricePerHour || 0),
+      priceMode: normalizePriceMode(newService.priceMode),
       fuelPerUnit: type === "service" ? Number(newService.fuelPerUnit || newService.fuelPerHour || 0) : 0,
     });
     setServices((prev) => [...prev, service]);
@@ -736,7 +819,7 @@ export default function Rechnungsprogramm() {
 
   const saveData = async () => {
     try {
-      await saveAppState({ invoice, invoices, customers, services, serviceHours, companySettings, companyProfiles });
+      await saveAppState({ invoice, invoiceSettings, invoices, customers, services, serviceHours, companySettings, companyProfiles });
       showSaveMessage("Daten lokal in IndexedDB gespeichert.");
     } catch (error) {
       console.error("Speichern fehlgeschlagen", error);
@@ -746,7 +829,9 @@ export default function Rechnungsprogramm() {
 
   const saveCurrentInvoice = () => {
     const snapshot = createInvoiceSnapshot(invoice);
-    setInvoice(snapshot.invoice);
+    const nextInvoiceNumber = incrementInvoiceNumber(snapshot.invoiceNumber);
+    setInvoiceSettings({ nextInvoiceNumber });
+    setInvoice({ ...snapshot.invoice, invoiceNumber: nextInvoiceNumber });
     setInvoices((prev) => {
       const withoutCurrent = prev.filter((entry) => entry.id !== snapshot.id);
       return [snapshot, ...withoutCurrent].slice(0, 100);
@@ -771,6 +856,7 @@ export default function Rechnungsprogramm() {
         version: BACKUP_VERSION,
         exportedAt: new Date().toISOString(),
         invoice,
+        invoiceSettings,
         invoices,
         companySettings,
         companyProfiles,
@@ -827,6 +913,7 @@ export default function Rechnungsprogramm() {
 
       const imported = normalizeAppState(parsed);
       setInvoice(imported.invoice);
+      setInvoiceSettings(imported.invoiceSettings);
       setInvoices(imported.invoices);
       setCompanySettings(imported.companySettings);
       setCompanyProfiles(imported.companyProfiles);
@@ -869,9 +956,11 @@ export default function Rechnungsprogramm() {
       console.error("Zurücksetzen fehlgeschlagen", error);
     }
     const defaultCompanySettings = createDefaultCompanySettings();
+    const defaultInvoiceSettings = createDefaultInvoiceSettings();
     setCompanySettings(defaultCompanySettings);
     setCompanyProfiles([]);
-    setInvoice(createDefaultInvoice(defaultCompanySettings));
+    setInvoiceSettings(defaultInvoiceSettings);
+    setInvoice(createDefaultInvoice(defaultCompanySettings, defaultInvoiceSettings));
     setInvoices([]);
     setCustomers(createDefaultCustomers());
     setServices(createDefaultServices());
@@ -941,7 +1030,7 @@ export default function Rechnungsprogramm() {
               <CardContent className="flex items-center gap-3 p-4">
                 <Euro className="h-5 w-5" />
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Zwischensumme</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Netto</p>
                   <p className="text-xl font-bold">{currency(subtotal)}</p>
                 </div>
               </CardContent>
@@ -959,12 +1048,39 @@ export default function Rechnungsprogramm() {
               <CardContent className="flex items-center gap-3 p-4">
                 <Receipt className="h-5 w-5" />
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Rechnungsbetrag</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Brutto</p>
                   <p className="text-xl font-bold">{currency(total)}</p>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          <Card className="rounded-2xl shadow-sm">
+            <CardHeader>
+              <CardTitle>Rechnungseinstellungen</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+              <Field label="Aktuelle Rechnungsnummer">
+                <Input
+                  value={invoiceSettings.nextInvoiceNumber}
+                  onChange={(e) => {
+                    const nextInvoiceNumber = e.target.value;
+                    setInvoiceSettings((prev) => ({ ...prev, nextInvoiceNumber }));
+                    setInvoice((prev) => ({ ...prev, invoiceNumber: nextInvoiceNumber }));
+                  }}
+                />
+              </Field>
+              <Button className="w-full md:w-auto" variant="outline" onClick={saveInvoiceNumberSetting}>
+                <Save className="mr-2 h-4 w-4" /> Speichern
+              </Button>
+              <Button className="w-full md:w-auto" variant="outline" onClick={createNextInvoice}>
+                <Plus className="mr-2 h-4 w-4" /> Neue Rechnung
+              </Button>
+              <p className="text-sm text-slate-500 md:col-span-3">
+                Beim Speichern einer Rechnung wird die Nummer automatisch hochgezählt, z. B. RE-2026-009 zu RE-2026-010.
+              </p>
+            </CardContent>
+          </Card>
 
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
@@ -1126,6 +1242,15 @@ export default function Rechnungsprogramm() {
                 {newService.type === "quantity" ? (
                   <Field label="Einheit"><Input placeholder="m³, t, Stück, l, kg" value={newService.unit} onChange={(e) => setNewService((prev) => ({ ...prev, unit: e.target.value }))} /></Field>
                 ) : null}
+                <Field label="Preisangabe">
+                  <select
+                    className="h-10 rounded-md border bg-white px-3 text-sm"
+                    value={newService.priceMode}
+                    onChange={(e) => setNewService((prev) => ({ ...prev, priceMode: e.target.value }))}
+                  >
+                    {Object.entries(PRICE_MODES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </Field>
                 <Field label={newService.type === "service" ? "Preis pro Stunde (€)" : newService.type === "fixed" ? "Festpreis (€)" : "Preis pro Einheit (€)"}>
                   <Input type="number" min="0" step="0.01" value={newService.pricePerUnit || newService.pricePerHour} onChange={(e) => setNewService((prev) => ({ ...prev, pricePerUnit: e.target.value, pricePerHour: e.target.value }))} />
                 </Field>
@@ -1135,6 +1260,9 @@ export default function Rechnungsprogramm() {
                   </Field>
                 ) : null}
                 <Button className="w-full sm:w-auto" onClick={addService}><Plus className="mr-2 h-4 w-4" /> Eintrag speichern</Button>
+                <p className="text-sm text-slate-500 md:col-span-3">
+                  Bei Bruttopreisen wird der vereinbarte Endpreis automatisch in Netto und MwSt. umgerechnet.
+                </p>
               </div>
 
               <div className="grid gap-3">
@@ -1148,7 +1276,7 @@ export default function Rechnungsprogramm() {
                       <div className="min-w-0">
                         <p className="break-words font-semibold">{entry.name}</p>
                         <p className="text-sm text-slate-600">Typ: {ENTRY_TYPES[entry.type]}</p>
-                        <p className="text-sm text-slate-600">Preis: {currency(entry.pricePerUnit)} / {entry.unit}</p>
+                        <p className="text-sm text-slate-600">Preis: {currency(entry.pricePerUnit)} / {entry.unit} · {normalizePriceMode(entry.priceMode) === "gross" ? "brutto vereinbart" : "netto"}</p>
                         {entry.type === "service" ? <p className="text-sm text-slate-600">Dieselverbrauch pro Stunde: {formatFuel(entry.fuelPerUnit)}</p> : null}
                         <p className="mt-2 break-words text-sm font-medium text-slate-700">
                           Vorschau: {currency(previewAmount)}{previewFuel > 0 ? ` · Diesel: ${formatFuel(previewFuel)}` : ""}
@@ -1197,7 +1325,7 @@ export default function Rechnungsprogramm() {
             </CardHeader>
             <CardContent className="grid gap-4">
               {invoice.items.map((item, index) => (
-                <div key={item.id} className="grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 xl:grid-cols-[1.1fr_1.1fr_95px_90px_115px_100px_110px_48px] xl:items-end">
+                <div key={item.id} className="grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 xl:grid-cols-[1.05fr_1.05fr_95px_90px_115px_120px_100px_110px_48px] xl:items-end">
                   <div className="grid gap-2">
                     <Label>Leistung/Artikel {index + 1}</Label>
                     <select className="h-10 rounded-md border bg-white px-3 text-sm" value={item.serviceId} onChange={(e) => applyServiceToItem(item.id, e.target.value)}>
@@ -1209,10 +1337,15 @@ export default function Rechnungsprogramm() {
                   <Field label="Menge"><Input type="number" min="0" step="0.25" value={item.quantity ?? item.hours} onChange={(e) => updateItem(item.id, "quantity", e.target.value)} /></Field>
                   <Field label="Einheit"><Input value={item.unit || ""} onChange={(e) => updateItem(item.id, "unit", e.target.value)} /></Field>
                   <Field label="Einzelpreis (€)"><Input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(item.id, "unitPrice", e.target.value)} /></Field>
+                  <Field label="Preisangabe">
+                    <select className="h-10 rounded-md border bg-white px-3 text-sm" value={normalizePriceMode(item.priceMode)} onChange={(e) => updateItem(item.id, "priceMode", e.target.value)}>
+                      {Object.entries(PRICE_MODES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  </Field>
                   <Field label="Diesel (l/Einheit)"><Input type="number" min="0" step="0.01" value={item.fuelPerUnit ?? item.fuelPerHour} onChange={(e) => updateItem(item.id, "fuelPerUnit", e.target.value)} /></Field>
                   <div className="grid gap-2">
-                    <Label>Gesamt</Label>
-                    <div className="h-10 rounded-md border bg-slate-50 px-3 py-2 text-sm">{currency(getLineTotal(item))}</div>
+                    <Label>Netto</Label>
+                    <div className="h-10 rounded-md border bg-slate-50 px-3 py-2 text-sm">{currency(getLineNetTotal(item, invoice.taxRate))}</div>
                   </div>
                   <Button className="w-full sm:col-span-2 xl:col-span-1 xl:w-auto" variant="ghost" size="icon" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
@@ -1277,9 +1410,12 @@ export default function Rechnungsprogramm() {
                           <td className="px-4 py-3 break-words">{item.description || "–"}</td>
                           <td className="px-4 py-3">{item.quantity ?? item.hours}</td>
                           <td className="px-4 py-3">{item.unit || ""}</td>
-                          <td className="px-4 py-3">{currency(item.unitPrice)}</td>
+                          <td className="px-4 py-3">
+                            {currency(item.unitPrice)}
+                            <span className="block text-xs text-slate-500">{normalizePriceMode(item.priceMode) === "gross" ? "brutto vereinbart" : "netto"}</span>
+                          </td>
                           <td className="px-4 py-3">{getLineFuel(item) > 0 ? formatFuel(getLineFuel(item)) : "–"}</td>
-                          <td className="px-4 py-3 text-right">{currency(getLineTotal(item))}</td>
+                          <td className="px-4 py-3 text-right">{currency(getLineNetTotal(item, invoice.taxRate))}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1287,10 +1423,10 @@ export default function Rechnungsprogramm() {
                 </div>
 
                 <div className="ml-auto w-full max-w-sm space-y-2 rounded-2xl border p-4">
-                  <SummaryRow label="Zwischensumme" value={currency(subtotal)} />
+                  <SummaryRow label="Zwischensumme Netto" value={currency(subtotal)} />
                   <SummaryRow label="Gesamt Dieselverbrauch" value={formatFuel(totalFuel)} />
                   <SummaryRow label={`MwSt. (${invoice.taxRate}%)`} value={currency(taxAmount)} />
-                  <SummaryRow label="Gesamt" value={currency(total)} strong />
+                  <SummaryRow label="Gesamt Brutto" value={currency(total)} strong />
                 </div>
 
                 <div>
