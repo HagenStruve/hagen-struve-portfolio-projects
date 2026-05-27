@@ -21,8 +21,10 @@ import {
   UserPlus,
   Wrench,
 } from "lucide-react";
+import { clearAppState, loadAppState, saveAppState } from "./storage/indexedDb.js";
 
-const STORAGE_KEY = "rechnungsprogramm-data-v7";
+const LEGACY_STORAGE_KEY = "rechnungsprogramm-data-v7";
+const BACKUP_VERSION = 1;
 
 const createId = () =>
   typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -82,6 +84,56 @@ const createDefaultServices = () => [
   { id: createId(), name: "Baggerarbeiten", pricePerHour: 85, fuelPerHour: 6.5 },
   { id: createId(), name: "Transport", pricePerHour: 72, fuelPerHour: 4.2 },
 ];
+
+function createAppState(overrides = {}) {
+  return {
+    invoice: createDefaultInvoice(),
+    invoices: [],
+    customers: createDefaultCustomers(),
+    services: createDefaultServices(),
+    serviceHours: {},
+    ...overrides,
+  };
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeAppState(raw) {
+  if (!isPlainObject(raw)) return createAppState();
+
+  const invoice = isPlainObject(raw.invoice) ? raw.invoice : createDefaultInvoice();
+  const customers = Array.isArray(raw.customers) ? raw.customers : createDefaultCustomers();
+  const services = Array.isArray(raw.services) ? raw.services : createDefaultServices();
+  const serviceHours = isPlainObject(raw.serviceHours) ? raw.serviceHours : {};
+  const invoices = Array.isArray(raw.invoices)
+    ? raw.invoices.filter((entry) => isPlainObject(entry?.invoice))
+    : [];
+
+  return createAppState({
+    invoice,
+    invoices,
+    customers,
+    services,
+    serviceHours,
+  });
+}
+
+function createInvoiceSnapshot(invoice) {
+  const id = invoice.id || createId();
+  return {
+    id,
+    invoiceNumber: invoice.invoiceNumber || "Ohne Nummer",
+    customerName: invoice.customerName || "Ohne Kunde",
+    invoiceDate: invoice.invoiceDate || new Date().toISOString().slice(0, 10),
+    savedAt: new Date().toISOString(),
+    invoice: {
+      ...invoice,
+      id,
+    },
+  };
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -253,14 +305,17 @@ const SummaryRow = ({ label, value, strong = false }) => (
 
 export default function Rechnungsprogramm() {
   const [invoice, setInvoice] = useState(() => createDefaultInvoice());
+  const [invoices, setInvoices] = useState([]);
   const [customers, setCustomers] = useState(() => createDefaultCustomers());
   const [services, setServices] = useState(() => createDefaultServices());
   const [newCustomer, setNewCustomer] = useState(() => emptyCustomer());
   const [newService, setNewService] = useState(() => emptyService());
   const [serviceHours, setServiceHours] = useState({});
   const [saveMessage, setSaveMessage] = useState("");
+  const [storageReady, setStorageReady] = useState(false);
   const fileInputRef = useRef(null);
   const saveTimerRef = useRef(null);
+  const autoSaveTimerRef = useRef(null);
 
   const showSaveMessage = (message) => {
     setSaveMessage(message);
@@ -269,23 +324,58 @@ export default function Rechnungsprogramm() {
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
-    try {
-      const parsed = JSON.parse(saved);
-      setInvoice(parsed.invoice || createDefaultInvoice());
-      setCustomers(parsed.customers?.length ? parsed.customers : createDefaultCustomers());
-      setServices(parsed.services?.length ? parsed.services : createDefaultServices());
-      setServiceHours(parsed.serviceHours || {});
-    } catch (error) {
-      console.error("Gespeicherte Daten konnten nicht geladen werden.", error);
-      showSaveMessage("Gespeicherte Daten konnten nicht geladen werden.");
+    let active = true;
+
+    async function restoreData() {
+      try {
+        const indexedDbState = await loadAppState();
+        let restored = indexedDbState;
+
+        if (!restored) {
+          const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+          restored = legacy ? JSON.parse(legacy) : null;
+        }
+
+        if (!active) return;
+
+        if (restored) {
+          const next = normalizeAppState(restored);
+          setInvoice(next.invoice);
+          setInvoices(next.invoices);
+          setCustomers(next.customers.length ? next.customers : createDefaultCustomers());
+          setServices(next.services.length ? next.services : createDefaultServices());
+          setServiceHours(next.serviceHours);
+        }
+      } catch (error) {
+        console.error("Gespeicherte Daten konnten nicht geladen werden.", error);
+        showSaveMessage("Gespeicherte Daten konnten nicht geladen werden.");
+      } finally {
+        if (active) setStorageReady(true);
+      }
     }
+
+    restoreData();
+    return () => {
+      active = false;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!storageReady) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveAppState({ invoice, invoices, customers, services, serviceHours }).catch((error) => {
+        console.error("Automatisches Speichern fehlgeschlagen", error);
+        showSaveMessage("Automatisches Speichern fehlgeschlagen.");
+      });
+    }, 350);
+  }, [storageReady, invoice, invoices, customers, services, serviceHours]);
 
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
   }, []);
 
@@ -410,24 +500,52 @@ export default function Rechnungsprogramm() {
     }));
   };
 
-  const saveData = () => {
+  const saveData = async () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ invoice, customers, services, serviceHours }));
-      showSaveMessage("Daten lokal gespeichert.");
+      await saveAppState({ invoice, invoices, customers, services, serviceHours });
+      showSaveMessage("Daten lokal in IndexedDB gespeichert.");
     } catch (error) {
       console.error("Speichern fehlgeschlagen", error);
       showSaveMessage("Speichern fehlgeschlagen.");
     }
   };
 
+  const saveCurrentInvoice = () => {
+    const snapshot = createInvoiceSnapshot(invoice);
+    setInvoice(snapshot.invoice);
+    setInvoices((prev) => {
+      const withoutCurrent = prev.filter((entry) => entry.id !== snapshot.id);
+      return [snapshot, ...withoutCurrent].slice(0, 100);
+    });
+    showSaveMessage("Rechnung gespeichert.");
+  };
+
+  const openSavedInvoice = (entry) => {
+    setInvoice(entry.invoice);
+    showSaveMessage("Rechnung geöffnet.");
+  };
+
+  const removeSavedInvoice = (id) => {
+    setInvoices((prev) => prev.filter((entry) => entry.id !== id));
+    showSaveMessage("Gespeicherte Rechnung entfernt.");
+  };
+
   const exportDataFile = () => {
     try {
-      const payload = { exportedAt: new Date().toISOString(), invoice, customers, services, serviceHours };
+      const payload = {
+        version: BACKUP_VERSION,
+        exportedAt: new Date().toISOString(),
+        invoice,
+        invoices,
+        customers,
+        services,
+        serviceHours,
+      };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${invoice.invoiceNumber || "rechnung"}.json`;
+      link.download = `rechnungsprogramm-backup-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -444,22 +562,30 @@ export default function Rechnungsprogramm() {
   const importDataFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    const confirmed = window.confirm(
+      "Die importierte JSON-Datei ersetzt die aktuellen lokalen Daten. Vorher am besten ein Backup exportieren. Fortfahren?"
+    );
+    if (!confirmed) {
+      event.target.value = "";
+      return;
+    }
+
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      const importedInvoice = parsed?.invoice || createDefaultInvoice();
-      const importedCustomers = Array.isArray(parsed?.customers) && parsed.customers.length ? parsed.customers : createDefaultCustomers();
-      const importedServices = Array.isArray(parsed?.services) && parsed.services.length ? parsed.services : createDefaultServices();
-      const importedServiceHours = parsed?.serviceHours || {};
-      setInvoice(importedInvoice);
-      setCustomers(importedCustomers);
-      setServices(importedServices);
-      setServiceHours(importedServiceHours);
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ invoice: importedInvoice, customers: importedCustomers, services: importedServices, serviceHours: importedServiceHours })
-      );
-      showSaveMessage("Datei wurde geladen.");
+      if (!isPlainObject(parsed) || (!parsed.invoice && !Array.isArray(parsed.customers) && !Array.isArray(parsed.services))) {
+        throw new Error("Ungültiges Backup-Format.");
+      }
+
+      const imported = normalizeAppState(parsed);
+      setInvoice(imported.invoice);
+      setInvoices(imported.invoices);
+      setCustomers(imported.customers.length ? imported.customers : createDefaultCustomers());
+      setServices(imported.services.length ? imported.services : createDefaultServices());
+      setServiceHours(imported.serviceHours);
+      await saveAppState(imported);
+      showSaveMessage("Backup wurde importiert.");
     } catch (error) {
       console.error("Datei-Import fehlgeschlagen", error);
       showSaveMessage("Datei konnte nicht geladen werden.");
@@ -486,13 +612,15 @@ export default function Rechnungsprogramm() {
     }
   };
 
-  const resetAll = () => {
+  const resetAll = async () => {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      await clearAppState();
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
     } catch (error) {
       console.error("Zurücksetzen fehlgeschlagen", error);
     }
     setInvoice(createDefaultInvoice());
+    setInvoices([]);
     setCustomers(createDefaultCustomers());
     setServices(createDefaultServices());
     setServiceHours({});
@@ -526,11 +654,14 @@ export default function Rechnungsprogramm() {
               <Button className="w-full 2xl:w-auto" variant="outline" onClick={saveData}>
                 <Save className="mr-2 h-4 w-4" /> Lokal speichern
               </Button>
+              <Button className="w-full 2xl:w-auto" variant="outline" onClick={saveCurrentInvoice}>
+                <Receipt className="mr-2 h-4 w-4" /> Rechnung speichern
+              </Button>
               <Button className="w-full 2xl:w-auto" variant="outline" onClick={exportDataFile}>
-                <Download className="mr-2 h-4 w-4" /> Datei speichern
+                <Download className="mr-2 h-4 w-4" /> Daten exportieren
               </Button>
               <Button className="w-full 2xl:w-auto" variant="outline" onClick={triggerImportFile}>
-                <Upload className="mr-2 h-4 w-4" /> Datei laden
+                <Upload className="mr-2 h-4 w-4" /> Daten importieren
               </Button>
               <Button className="w-full 2xl:w-auto" onClick={printInvoice}>
                 <Printer className="mr-2 h-4 w-4" /> PDF / Drucken
@@ -548,6 +679,10 @@ export default function Rechnungsprogramm() {
               <span>{saveMessage}</span>
             </div>
           ) : null}
+
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
+            Daten werden nur lokal auf diesem Gerät in IndexedDB gespeichert. Bitte regelmäßig ein Backup exportieren.
+          </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <Card className="rounded-2xl shadow-sm">
@@ -578,6 +713,42 @@ export default function Rechnungsprogramm() {
               </CardContent>
             </Card>
           </div>
+
+          <Card className="rounded-2xl shadow-sm">
+            <CardHeader>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle>Gespeicherte Rechnungen</CardTitle>
+                <Button className="w-full sm:w-auto" variant="outline" onClick={saveCurrentInvoice}>
+                  <Save className="mr-2 h-4 w-4" /> Aktuelle Rechnung sichern
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              {invoices.length ? (
+                invoices.map((entry) => (
+                  <div key={entry.id} className="grid gap-3 rounded-2xl border p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                    <div className="min-w-0">
+                      <p className="break-words font-semibold">{entry.invoiceNumber}</p>
+                      <p className="break-words text-sm text-slate-600">
+                        {entry.customerName} · {entry.invoiceDate}
+                      </p>
+                      <p className="text-xs text-slate-500">Gespeichert: {new Date(entry.savedAt).toLocaleString("de-DE")}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" onClick={() => openSavedInvoice(entry)}>Öffnen</Button>
+                      <Button variant="ghost" size="icon" onClick={() => removeSavedInvoice(entry.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-2xl border border-dashed p-4 text-sm text-slate-500">
+                  Noch keine Rechnung gespeichert. Nutze „Rechnung speichern“, um diese Rechnung später wieder zu öffnen.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
