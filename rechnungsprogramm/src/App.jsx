@@ -25,6 +25,11 @@ import { clearAppState, loadAppState, saveAppState } from "./storage/indexedDb.j
 
 const LEGACY_STORAGE_KEY = "rechnungsprogramm-data-v7";
 const BACKUP_VERSION = 1;
+const ENTRY_TYPES = {
+  service: "Dienstleistung pro Stunde",
+  fixed: "Festpreis",
+  quantity: "Ware/Menge",
+};
 
 const createId = () =>
   typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -34,9 +39,13 @@ const createId = () =>
 const emptyItem = () => ({
   id: createId(),
   serviceId: "",
+  type: "service",
   description: "",
+  quantity: 1,
+  unit: "h",
   hours: 1,
   unitPrice: 0,
+  fuelPerUnit: 0,
   fuelPerHour: 0,
 });
 
@@ -49,8 +58,12 @@ const emptyCustomer = () => ({
 
 const emptyService = () => ({
   id: createId(),
+  type: "service",
   name: "",
+  unit: "h",
+  pricePerUnit: 0,
   pricePerHour: 0,
+  fuelPerUnit: 0,
   fuelPerHour: 0,
 });
 
@@ -99,8 +112,8 @@ const createDefaultCustomers = () => [
 ];
 
 const createDefaultServices = () => [
-  { id: createId(), name: "Baggerarbeiten", pricePerHour: 85, fuelPerHour: 6.5 },
-  { id: createId(), name: "Transport", pricePerHour: 72, fuelPerHour: 4.2 },
+  { id: createId(), type: "service", name: "Baggerarbeiten", unit: "h", pricePerUnit: 85, pricePerHour: 85, fuelPerUnit: 6.5, fuelPerHour: 6.5 },
+  { id: createId(), type: "service", name: "Transport", unit: "h", pricePerUnit: 72, pricePerHour: 72, fuelPerUnit: 4.2, fuelPerHour: 4.2 },
 ];
 
 function createAppState(overrides = {}) {
@@ -128,15 +141,25 @@ function normalizeAppState(raw) {
     ? applyCompanySettingsToInvoice({ ...createDefaultInvoice(companySettings), ...raw.invoice }, companySettings)
     : createDefaultInvoice(companySettings);
   const customers = Array.isArray(raw.customers) ? raw.customers : createDefaultCustomers();
-  const services = Array.isArray(raw.services) ? raw.services : createDefaultServices();
+  const services = Array.isArray(raw.services) ? raw.services.map(normalizeServiceEntry) : createDefaultServices();
   const serviceHours = isPlainObject(raw.serviceHours) ? raw.serviceHours : {};
   const companyProfiles = normalizeCompanyProfiles(raw.companyProfiles);
   const invoices = Array.isArray(raw.invoices)
-    ? raw.invoices.filter((entry) => isPlainObject(entry?.invoice))
+    ? raw.invoices.filter((entry) => isPlainObject(entry?.invoice)).map((entry) => ({
+        ...entry,
+        invoice: {
+          ...entry.invoice,
+          items: Array.isArray(entry.invoice.items) && entry.invoice.items.length ? entry.invoice.items.map(normalizeInvoiceItem) : [emptyItem()],
+        },
+      }))
     : [];
+  const normalizedInvoice = {
+    ...invoice,
+    items: Array.isArray(invoice.items) && invoice.items.length ? invoice.items.map(normalizeInvoiceItem) : [emptyItem()],
+  };
 
   return createAppState({
-    invoice,
+    invoice: normalizedInvoice,
     invoices,
     customers,
     services,
@@ -184,16 +207,71 @@ function hasCompanySettings(settings) {
   );
 }
 
+function normalizeEntryType(type) {
+  return Object.prototype.hasOwnProperty.call(ENTRY_TYPES, type) ? type : "service";
+}
+
+function normalizeServiceEntry(entry) {
+  const type = normalizeEntryType(entry?.type);
+  const unit = type === "service" ? "h" : type === "fixed" ? "Stück" : entry?.unit || "Stück";
+  const pricePerUnit = Number(entry?.pricePerUnit ?? entry?.pricePerHour ?? entry?.fixedPrice ?? 0);
+  const fuelPerUnit = type === "service" ? Number(entry?.fuelPerUnit ?? entry?.fuelPerHour ?? 0) : 0;
+
+  return {
+    id: entry?.id || createId(),
+    type,
+    name: entry?.name || "",
+    unit,
+    pricePerUnit,
+    pricePerHour: type === "service" ? pricePerUnit : 0,
+    fuelPerUnit,
+    fuelPerHour: type === "service" ? fuelPerUnit : 0,
+  };
+}
+
+function normalizeInvoiceItem(item) {
+  const type = normalizeEntryType(item?.type);
+  const quantity = Number(item?.quantity ?? item?.hours ?? 1);
+  const unit = item?.unit || (type === "service" ? "h" : type === "fixed" ? "Stück" : "");
+  const unitPrice = Number(item?.unitPrice ?? item?.pricePerUnit ?? item?.pricePerHour ?? 0);
+  const fuelPerUnit = type === "service" ? Number(item?.fuelPerUnit ?? item?.fuelPerHour ?? 0) : 0;
+
+  return {
+    id: item?.id || createId(),
+    serviceId: item?.serviceId || "",
+    type,
+    description: item?.description || "",
+    quantity,
+    unit,
+    hours: quantity,
+    unitPrice,
+    fuelPerUnit,
+    fuelPerHour: fuelPerUnit,
+  };
+}
+
+function getLineTotal(item) {
+  return Number(item.quantity ?? item.hours ?? 0) * Number(item.unitPrice || 0);
+}
+
+function getLineFuel(item) {
+  return Number(item.quantity ?? item.hours ?? 0) * Number(item.fuelPerUnit ?? item.fuelPerHour ?? 0);
+}
+
 function createInvoiceSnapshot(invoice) {
   const id = invoice.id || createId();
+  const normalizedInvoice = {
+    ...invoice,
+    items: invoice.items.map(normalizeInvoiceItem),
+  };
   return {
     id,
-    invoiceNumber: invoice.invoiceNumber || "Ohne Nummer",
-    customerName: invoice.customerName || "Ohne Kunde",
-    invoiceDate: invoice.invoiceDate || new Date().toISOString().slice(0, 10),
+    invoiceNumber: normalizedInvoice.invoiceNumber || "Ohne Nummer",
+    customerName: normalizedInvoice.customerName || "Ohne Kunde",
+    invoiceDate: normalizedInvoice.invoiceDate || new Date().toISOString().slice(0, 10),
     savedAt: new Date().toISOString(),
     invoice: {
-      ...invoice,
+      ...normalizedInvoice,
       id,
     },
   };
@@ -223,25 +301,33 @@ function formatFuel(value) {
 }
 
 function createInvoiceItemFromService(service, hours = 1) {
+  const entry = normalizeServiceEntry(service);
+  const quantity = Number(hours || 1);
   return {
     id: createId(),
-    serviceId: service?.id || "",
-    description: service?.name || "",
-    hours: Number(hours || 1),
-    unitPrice: Number(service?.pricePerHour || 0),
-    fuelPerHour: Number(service?.fuelPerHour || 0),
+    serviceId: entry.id,
+    type: entry.type,
+    description: entry.name,
+    quantity,
+    unit: entry.unit,
+    hours: quantity,
+    unitPrice: entry.pricePerUnit,
+    fuelPerUnit: entry.fuelPerUnit,
+    fuelPerHour: entry.fuelPerUnit,
   };
 }
 
 function buildInvoiceHtml(invoice, subtotal, totalFuel, taxAmount, total) {
   const rows = invoice.items
     .map((item) => {
-      const lineTotal = Number(item.hours || 0) * Number(item.unitPrice || 0);
+      const lineTotal = getLineTotal(item);
+      const lineFuel = getLineFuel(item);
       return `<tr>
         <td>${escapeHtml(item.description || "–")}</td>
-        <td>${escapeHtml(item.hours)}</td>
+        <td>${escapeHtml(item.quantity ?? item.hours)}</td>
+        <td>${escapeHtml(item.unit || "")}</td>
         <td>${currency(item.unitPrice)}</td>
-        <td>${formatFuel(item.fuelPerHour)}</td>
+        <td>${lineFuel > 0 ? formatFuel(lineFuel) : "–"}</td>
         <td style="text-align:right">${currency(lineTotal)}</td>
       </tr>`;
     })
@@ -304,9 +390,10 @@ function buildInvoiceHtml(invoice, subtotal, totalFuel, taxAmount, total) {
       <thead>
         <tr>
           <th>Beschreibung</th>
-          <th>Stunden</th>
-          <th>Preis/Stunde</th>
-          <th>Diesel/Stunde</th>
+          <th>Menge</th>
+          <th>Einheit</th>
+          <th>Einzelpreis</th>
+          <th>Diesel</th>
           <th style="text-align:right">Betrag</th>
         </tr>
       </thead>
@@ -346,8 +433,9 @@ function runInlineTests() {
   const newItem = createInvoiceItemFromService(testService, 2.5);
   console.assert(newItem.description === "Test", "Dienstleistung sollte die Beschreibung übernehmen");
   console.assert(newItem.unitPrice === 99, "Dienstleistung sollte den Stundenpreis übernehmen");
-  console.assert(newItem.fuelPerHour === 3.5, "Dienstleistung sollte den Dieselverbrauch übernehmen");
-  console.assert(newItem.hours === 2.5, "Neue Rechnungsposition sollte die gewählte Stundenzahl übernehmen");
+  console.assert(newItem.fuelPerUnit === 3.5, "Dienstleistung sollte den Dieselverbrauch übernehmen");
+  console.assert(newItem.quantity === 2.5, "Neue Rechnungsposition sollte die gewählte Menge übernehmen");
+  console.assert(getLineTotal(createInvoiceItemFromService({ id: "2", type: "fixed", name: "Testartikel", pricePerUnit: 2500 }, 2)) === 5000, "Festpreisartikel sollten mit Menge abrechnen");
 
   const testInvoice = createDefaultInvoice();
   const html = buildInvoiceHtml(testInvoice, 100, 4, 19, 119);
@@ -456,12 +544,12 @@ export default function Rechnungsprogramm() {
   }, []);
 
   const subtotal = useMemo(
-    () => invoice.items.reduce((sum, item) => sum + Number(item.hours || 0) * Number(item.unitPrice || 0), 0),
+    () => invoice.items.reduce((sum, item) => sum + getLineTotal(item), 0),
     [invoice.items]
   );
 
   const totalFuel = useMemo(
-    () => invoice.items.reduce((sum, item) => sum + Number(item.hours || 0) * Number(item.fuelPerHour || 0), 0),
+    () => invoice.items.reduce((sum, item) => sum + getLineFuel(item), 0),
     [invoice.items]
   );
 
@@ -524,7 +612,19 @@ export default function Rechnungsprogramm() {
   const updateItem = (id, field, value) => {
     setInvoice((prev) => ({
       ...prev,
-      items: prev.items.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
+      items: prev.items.map((item) => {
+        if (item.id !== id) return item;
+        const next = { ...item, [field]: value };
+        if (field === "quantity") next.hours = value;
+        if (field === "fuelPerUnit") next.fuelPerHour = value;
+        if (field === "type" && value !== "service") {
+          next.fuelPerUnit = 0;
+          next.fuelPerHour = 0;
+          next.unit = value === "fixed" ? "Stück" : next.unit;
+        }
+        if (field === "type" && value === "service") next.unit = "h";
+        return next;
+      }),
     }));
   };
 
@@ -550,12 +650,16 @@ export default function Rechnungsprogramm() {
       items: prev.items.map((item) => {
         if (item.id !== itemId) return item;
         if (!service) return { ...item, serviceId: "" };
+        const entry = normalizeServiceEntry(service);
         return {
           ...item,
-          serviceId: service.id,
-          description: service.name,
-          unitPrice: service.pricePerHour,
-          fuelPerHour: service.fuelPerHour,
+          serviceId: entry.id,
+          type: entry.type,
+          description: entry.name,
+          unit: entry.unit,
+          unitPrice: entry.pricePerUnit,
+          fuelPerUnit: entry.fuelPerUnit,
+          fuelPerHour: entry.fuelPerUnit,
         };
       }),
     }));
@@ -603,12 +707,15 @@ export default function Rechnungsprogramm() {
 
   const addService = () => {
     if (!newService.name.trim()) return;
-    const service = {
+    const type = normalizeEntryType(newService.type);
+    const service = normalizeServiceEntry({
       ...newService,
+      type,
       name: newService.name.trim(),
-      pricePerHour: Number(newService.pricePerHour || 0),
-      fuelPerHour: Number(newService.fuelPerHour || 0),
-    };
+      unit: type === "service" ? "h" : type === "fixed" ? "Stück" : newService.unit.trim() || "Stück",
+      pricePerUnit: Number(newService.pricePerUnit || newService.pricePerHour || 0),
+      fuelPerUnit: type === "service" ? Number(newService.fuelPerUnit || newService.fuelPerHour || 0) : 0,
+    });
     setServices((prev) => [...prev, service]);
     setServiceHours((prev) => ({ ...prev, [service.id]: 1 }));
     setNewService(emptyService());
@@ -648,7 +755,8 @@ export default function Rechnungsprogramm() {
   };
 
   const openSavedInvoice = (entry) => {
-    setInvoice(applyCompanySettingsToInvoice(entry.invoice, companySettings));
+    const normalizedItems = Array.isArray(entry.invoice.items) && entry.invoice.items.length ? entry.invoice.items.map(normalizeInvoiceItem) : [emptyItem()];
+    setInvoice(applyCompanySettingsToInvoice({ ...entry.invoice, items: normalizedItems }, companySettings));
     showSaveMessage("Rechnung geöffnet.");
   };
 
@@ -999,33 +1107,55 @@ export default function Rechnungsprogramm() {
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2"><Wrench className="h-5 w-5" /><CardTitle>Dienstleistungen</CardTitle></div>
-                <span className="text-xs text-slate-500">Erst Stunden wählen, dann hinzufügen</span>
+                <div className="flex items-center gap-2"><Wrench className="h-5 w-5" /><CardTitle>Leistungen & Artikel</CardTitle></div>
+                <span className="text-xs text-slate-500">Menge wählen, dann zur Rechnung hinzufügen</span>
               </div>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-4 rounded-2xl border p-4 md:grid-cols-3">
-                <Field label="Name der Dienstleistung"><Input value={newService.name} onChange={(e) => setNewService((prev) => ({ ...prev, name: e.target.value }))} /></Field>
-                <Field label="Preis pro Stunde (€)"><Input type="number" min="0" step="0.01" value={newService.pricePerHour} onChange={(e) => setNewService((prev) => ({ ...prev, pricePerHour: e.target.value }))} /></Field>
-                <Field label="Dieselverbrauch pro Stunde (l)"><Input type="number" min="0" step="0.01" value={newService.fuelPerHour} onChange={(e) => setNewService((prev) => ({ ...prev, fuelPerHour: e.target.value }))} /></Field>
-                <Button className="w-full sm:w-auto" onClick={addService}><Plus className="mr-2 h-4 w-4" /> Dienstleistung speichern</Button>
+                <Field label="Typ">
+                  <select
+                    className="h-10 rounded-md border bg-white px-3 text-sm"
+                    value={newService.type}
+                    onChange={(e) => setNewService((prev) => ({ ...prev, type: e.target.value, unit: e.target.value === "service" ? "h" : e.target.value === "fixed" ? "Stück" : prev.unit }))}
+                  >
+                    {Object.entries(ENTRY_TYPES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </Field>
+                <Field label="Name"><Input value={newService.name} onChange={(e) => setNewService((prev) => ({ ...prev, name: e.target.value }))} /></Field>
+                {newService.type === "quantity" ? (
+                  <Field label="Einheit"><Input placeholder="m³, t, Stück, l, kg" value={newService.unit} onChange={(e) => setNewService((prev) => ({ ...prev, unit: e.target.value }))} /></Field>
+                ) : null}
+                <Field label={newService.type === "service" ? "Preis pro Stunde (€)" : newService.type === "fixed" ? "Festpreis (€)" : "Preis pro Einheit (€)"}>
+                  <Input type="number" min="0" step="0.01" value={newService.pricePerUnit || newService.pricePerHour} onChange={(e) => setNewService((prev) => ({ ...prev, pricePerUnit: e.target.value, pricePerHour: e.target.value }))} />
+                </Field>
+                {newService.type === "service" ? (
+                  <Field label="Dieselverbrauch pro Stunde (l)">
+                    <Input type="number" min="0" step="0.01" value={newService.fuelPerUnit || newService.fuelPerHour} onChange={(e) => setNewService((prev) => ({ ...prev, fuelPerUnit: e.target.value, fuelPerHour: e.target.value }))} />
+                  </Field>
+                ) : null}
+                <Button className="w-full sm:w-auto" onClick={addService}><Plus className="mr-2 h-4 w-4" /> Eintrag speichern</Button>
               </div>
 
               <div className="grid gap-3">
                 {services.map((service) => {
+                  const entry = normalizeServiceEntry(service);
                   const selectedHours = serviceHours[service.id] ?? 1;
-                  const previewAmount = Number(selectedHours || 0) * Number(service.pricePerHour || 0);
-                  const previewFuel = Number(selectedHours || 0) * Number(service.fuelPerHour || 0);
+                  const previewAmount = Number(selectedHours || 0) * Number(entry.pricePerUnit || 0);
+                  const previewFuel = Number(selectedHours || 0) * Number(entry.fuelPerUnit || 0);
                   return (
                     <div key={service.id} className="grid gap-4 rounded-2xl border p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                       <div className="min-w-0">
-                        <p className="break-words font-semibold">{service.name}</p>
-                        <p className="text-sm text-slate-600">Preis pro Stunde: {currency(service.pricePerHour)}</p>
-                        <p className="text-sm text-slate-600">Dieselverbrauch pro Stunde: {formatFuel(service.fuelPerHour)}</p>
-                        <p className="mt-2 break-words text-sm font-medium text-slate-700">Vorschau: {currency(previewAmount)} · Diesel: {formatFuel(previewFuel)}</p>
+                        <p className="break-words font-semibold">{entry.name}</p>
+                        <p className="text-sm text-slate-600">Typ: {ENTRY_TYPES[entry.type]}</p>
+                        <p className="text-sm text-slate-600">Preis: {currency(entry.pricePerUnit)} / {entry.unit}</p>
+                        {entry.type === "service" ? <p className="text-sm text-slate-600">Dieselverbrauch pro Stunde: {formatFuel(entry.fuelPerUnit)}</p> : null}
+                        <p className="mt-2 break-words text-sm font-medium text-slate-700">
+                          Vorschau: {currency(previewAmount)}{previewFuel > 0 ? ` · Diesel: ${formatFuel(previewFuel)}` : ""}
+                        </p>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-[140px_auto_auto] sm:items-end">
-                        <Field label="Stunden"><Input type="number" min="0.25" step="0.25" value={selectedHours} onChange={(e) => setServiceHours((prev) => ({ ...prev, [service.id]: e.target.value }))} /></Field>
+                        <Field label={entry.type === "service" ? "Stunden" : "Menge"}><Input type="number" min="0.25" step="0.25" value={selectedHours} onChange={(e) => setServiceHours((prev) => ({ ...prev, [service.id]: e.target.value }))} /></Field>
                         <Button onClick={() => addServiceToInvoice(service.id)}><Plus className="mr-2 h-4 w-4" /> Zur Rechnung</Button>
                         <Button variant="ghost" size="icon" onClick={() => removeService(service.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
@@ -1067,21 +1197,22 @@ export default function Rechnungsprogramm() {
             </CardHeader>
             <CardContent className="grid gap-4">
               {invoice.items.map((item, index) => (
-                <div key={item.id} className="grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.1fr_100px_120px_120px_110px_48px] xl:items-end">
+                <div key={item.id} className="grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 xl:grid-cols-[1.1fr_1.1fr_95px_90px_115px_100px_110px_48px] xl:items-end">
                   <div className="grid gap-2">
-                    <Label>Dienstleistung {index + 1}</Label>
+                    <Label>Leistung/Artikel {index + 1}</Label>
                     <select className="h-10 rounded-md border bg-white px-3 text-sm" value={item.serviceId} onChange={(e) => applyServiceToItem(item.id, e.target.value)}>
                       <option value="">Bitte auswählen</option>
                       {services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
                     </select>
                   </div>
                   <Field label="Beschreibung"><Input value={item.description} onChange={(e) => updateItem(item.id, "description", e.target.value)} /></Field>
-                  <Field label="Stunden"><Input type="number" min="0" step="0.25" value={item.hours} onChange={(e) => updateItem(item.id, "hours", e.target.value)} /></Field>
-                  <Field label="Preis/Stunde (€)"><Input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(item.id, "unitPrice", e.target.value)} /></Field>
-                  <Field label="Diesel/Stunde (l)"><Input type="number" min="0" step="0.01" value={item.fuelPerHour} onChange={(e) => updateItem(item.id, "fuelPerHour", e.target.value)} /></Field>
+                  <Field label="Menge"><Input type="number" min="0" step="0.25" value={item.quantity ?? item.hours} onChange={(e) => updateItem(item.id, "quantity", e.target.value)} /></Field>
+                  <Field label="Einheit"><Input value={item.unit || ""} onChange={(e) => updateItem(item.id, "unit", e.target.value)} /></Field>
+                  <Field label="Einzelpreis (€)"><Input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(item.id, "unitPrice", e.target.value)} /></Field>
+                  <Field label="Diesel (l/Einheit)"><Input type="number" min="0" step="0.01" value={item.fuelPerUnit ?? item.fuelPerHour} onChange={(e) => updateItem(item.id, "fuelPerUnit", e.target.value)} /></Field>
                   <div className="grid gap-2">
                     <Label>Gesamt</Label>
-                    <div className="h-10 rounded-md border bg-slate-50 px-3 py-2 text-sm">{currency(Number(item.hours || 0) * Number(item.unitPrice || 0))}</div>
+                    <div className="h-10 rounded-md border bg-slate-50 px-3 py-2 text-sm">{currency(getLineTotal(item))}</div>
                   </div>
                   <Button className="w-full sm:col-span-2 xl:col-span-1 xl:w-auto" variant="ghost" size="icon" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
@@ -1133,9 +1264,10 @@ export default function Rechnungsprogramm() {
                     <thead className="bg-slate-100">
                       <tr>
                         <th className="px-4 py-3">Beschreibung</th>
-                        <th className="px-4 py-3">Stunden</th>
-                        <th className="px-4 py-3">Preis/Stunde</th>
-                        <th className="px-4 py-3">Diesel/Stunde</th>
+                        <th className="px-4 py-3">Menge</th>
+                        <th className="px-4 py-3">Einheit</th>
+                        <th className="px-4 py-3">Einzelpreis</th>
+                        <th className="px-4 py-3">Diesel</th>
                         <th className="px-4 py-3 text-right">Betrag</th>
                       </tr>
                     </thead>
@@ -1143,10 +1275,11 @@ export default function Rechnungsprogramm() {
                       {invoice.items.map((item) => (
                         <tr key={item.id} className="border-t align-top">
                           <td className="px-4 py-3 break-words">{item.description || "–"}</td>
-                          <td className="px-4 py-3">{item.hours}</td>
+                          <td className="px-4 py-3">{item.quantity ?? item.hours}</td>
+                          <td className="px-4 py-3">{item.unit || ""}</td>
                           <td className="px-4 py-3">{currency(item.unitPrice)}</td>
-                          <td className="px-4 py-3">{formatFuel(item.fuelPerHour)}</td>
-                          <td className="px-4 py-3 text-right">{currency(Number(item.hours || 0) * Number(item.unitPrice || 0))}</td>
+                          <td className="px-4 py-3">{getLineFuel(item) > 0 ? formatFuel(getLineFuel(item)) : "–"}</td>
+                          <td className="px-4 py-3 text-right">{currency(getLineTotal(item))}</td>
                         </tr>
                       ))}
                     </tbody>
