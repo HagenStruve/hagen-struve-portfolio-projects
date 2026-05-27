@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LeadPilot | Leadgenerierung & Datenexport</title>
+  <meta name="description" content="LeadPilot ist ein browserbasiertes Tool zur strukturierten Leadgenerierung, regionalen Eingrenzung und CSV/JSON-Auswertung.">
+  <link rel="icon" type="image/png" href="../assets/brand/favicon.png">
+  <link rel="apple-touch-icon" href="../assets/brand/apple-touch-icon.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero-panel">
+      <div class="hero-copy">
+        <p class="eyebrow">LeadPilot</p>
+        <h1>Leadgenerierung & Datenexport</h1>
+        <p>
+          Strukturiere Suchparameter, grenze Regionen sauber ein und exportiere Leads
+          als CSV oder JSON für die anschließende Bewertung mit einem LLM.
+        </p>
+      </div>
+
+      <aside class="notice-card">
+        <strong>API-first Ansatz</strong>
+        <span>Google API optional. Der API-Key bleibt lokal im Browser.</span>
+        <span>Kein aggressives Scraping, keine Umgehung von Schutzmechanismen.</span>
+      </aside>
+    </section>
+
+    <section class="workspace">
+      <form class="search-card" id="leadForm">
+        <div class="section-title">
+        <p class="eyebrow">Suchauftrag</p>
+          <h2>Parameter festlegen</h2>
+        </div>
+
+        <div class="field-grid">
+          <label>
+            <span>Keyword / Branche</span>
+            <input id="keyword" name="keyword" type="text" value="Landtechnik" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Bundesland</span>
+            <input id="state" name="state" type="text" value="Schleswig-Holstein" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Kreis / Region</span>
+            <input id="region" name="region" type="text" value="Steinburg" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Stadt</span>
+            <input id="city" name="city" type="text" value="Itzehoe" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Maximale Ergebnisse</span>
+            <input id="limit" name="limit" type="number" min="3" max="50" value="12">
+          </label>
+
+          <label>
+            <span>Google Places API-Key optional</span>
+            <input id="apiKey" name="apiKey" type="password" placeholder="Bleibt lokal im Browser" autocomplete="off">
+          </label>
+        </div>
+
+        <p class="helper">
+          Demo-Modus erzeugt realistische Beispieldaten ohne externe Anfrage.
+          Eine spätere Google-Places-/Maps-API-Anbindung ist vorbereitet.
+        </p>
+
+        <div class="actions">
+          <button class="primary" type="submit">Leads suchen</button>
+          <button class="secondary" id="demoBtn" type="button">Demo-Leads erzeugen</button>
+          <button class="secondary" id="csvBtn" type="button">CSV exportieren</button>
+          <button class="secondary" id="jsonBtn" type="button">JSON exportieren</button>
+        </div>
+
+        <p class="status-line" id="statusLine" role="status">Bereit für Demo-Recherche.</p>
+      </form>
+
+      <aside class="workflow-card">
+        <p class="eyebrow">Workflow</p>
+        <h2>Export für LLM-Auswertung</h2>
+        <ol>
+          <li>Suchparameter definieren und Demo-Leads erzeugen.</li>
+          <li>CSV oder JSON herunterladen.</li>
+          <li>Export an ein LLM geben, um Leads zu priorisieren, zu clustern und zu bewerten.</li>
+        </ol>
+      </aside>
+    </section>
+
+    <section class="results-card">
+      <div class="results-head">
+        <div>
+          <p class="eyebrow">Leadliste</p>
+          <h2>Strukturierte Ergebnisse</h2>
+        </div>
+        <div class="metrics">
+          <span><strong id="leadCount">0</strong> Leads</span>
+          <span id="sourceLabel">Quelle: Demo/API vorbereitet</span>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Firmenname</th>
+              <th>Kategorie</th>
+              <th>Adresse</th>
+              <th>Ort</th>
+              <th>Telefon</th>
+              <th>Website</th>
+              <th>E-Mail</th>
+              <th>Quelle</th>
+              <th>Notizen</th>
+            </tr>
+          </thead>
+          <tbody id="leadRows">
+            <tr>
+              <td colspan="9" class="empty">Noch keine Leads. Starte den Demo-Modus oder eine vorbereitete Suche.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
