@@ -1132,8 +1132,8 @@ export default function Rechnungsprogramm() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 p-3 pb-24 sm:p-4 sm:pb-24 md:p-8 md:pb-28 xl:pb-8 print:bg-white">
-      <div className="mx-auto grid w-full max-w-[1800px] gap-4 md:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(430px,0.72fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(560px,0.75fr)]">
-        <div className="grid gap-6 print:hidden">
+      <div className="mx-auto grid w-full max-w-[1800px] items-start gap-4 md:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(420px,620px)] 2xl:grid-cols-[minmax(0,1fr)_minmax(520px,720px)]">
+        <div className="grid min-w-0 gap-6 print:hidden">
           <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-center 2xl:justify-between">
             <div className="flex items-start gap-3 sm:items-center">
               <div className="rounded-2xl border bg-white p-3 shadow-sm">
@@ -1528,7 +1528,7 @@ export default function Rechnungsprogramm() {
             </CardHeader>
             <CardContent className="grid gap-4">
               {invoice.items.map((item, index) => (
-                <div key={item.id} className="grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 xl:grid-cols-[1.05fr_1.05fr_95px_90px_115px_120px_100px_110px_48px] xl:items-end">
+                <div key={item.id} className="grid gap-3 rounded-2xl border p-4 sm:grid-cols-2 2xl:grid-cols-[1.05fr_1.05fr_95px_90px_115px_120px_100px_110px_48px] 2xl:items-end">
                   <div className="grid gap-2">
                     <Label>Leistung/Artikel {index + 1}</Label>
                     <select className="h-10 rounded-md border bg-white px-3 text-sm" value={item.serviceId} onChange={(e) => applyServiceToItem(item.id, e.target.value)}>
@@ -1550,7 +1550,7 @@ export default function Rechnungsprogramm() {
                     <Label>Netto</Label>
                     <div className="h-10 rounded-md border bg-slate-50 px-3 py-2 text-sm">{currency(getLineNetTotal(item, invoice.taxRate))}</div>
                   </div>
-                  <Button className="w-full sm:col-span-2 xl:col-span-1 xl:w-auto" variant="ghost" size="icon" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                  <Button className="w-full sm:col-span-2 2xl:col-span-1 2xl:w-auto" variant="ghost" size="icon" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               ))}
             </CardContent>
@@ -1567,7 +1567,7 @@ export default function Rechnungsprogramm() {
           </Card>
         </div>
 
-        <div className="hidden min-w-0 xl:block xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:self-start xl:overflow-y-auto">
+        <div className="hidden min-w-0 xl:sticky xl:top-6 xl:block xl:max-h-[calc(100dvh-48px)] xl:self-start xl:overflow-y-auto">
           <Card className="overflow-hidden rounded-2xl shadow-sm print:border-0 print:shadow-none">
             <CardHeader className="border-b print:border-b"><CardTitle className="text-xl sm:text-2xl">Rechnungsvorschau</CardTitle></CardHeader>
             <CardContent className="p-4 sm:p-6 md:p-8">
