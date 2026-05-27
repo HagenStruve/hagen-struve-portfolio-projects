@@ -11,6 +11,7 @@ import {
   Euro,
   Fuel,
   Mail,
+  Pencil,
   Plus,
   Printer,
   Receipt,
@@ -20,6 +21,7 @@ import {
   Upload,
   UserPlus,
   Wrench,
+  X,
 } from "lucide-react";
 import { clearAppState, loadAppState, saveAppState } from "./storage/indexedDb.js";
 
@@ -531,11 +533,15 @@ export default function Rechnungsprogramm() {
   const [invoiceSettings, setInvoiceSettings] = useState(() => createDefaultInvoiceSettings());
   const [invoices, setInvoices] = useState([]);
   const [companySettings, setCompanySettings] = useState(() => createDefaultCompanySettings());
+  const [companyForm, setCompanyForm] = useState(() => createDefaultCompanySettings());
   const [companyProfiles, setCompanyProfiles] = useState([]);
   const [customers, setCustomers] = useState(() => createDefaultCustomers());
   const [services, setServices] = useState(() => createDefaultServices());
   const [newCustomer, setNewCustomer] = useState(() => emptyCustomer());
   const [newService, setNewService] = useState(() => emptyService());
+  const [editingCompanyId, setEditingCompanyId] = useState("");
+  const [editingCustomerId, setEditingCustomerId] = useState("");
+  const [editingServiceId, setEditingServiceId] = useState("");
   const [serviceHours, setServiceHours] = useState({});
   const [saveMessage, setSaveMessage] = useState("");
   const [storageReady, setStorageReady] = useState(false);
@@ -570,6 +576,7 @@ export default function Rechnungsprogramm() {
           setInvoiceSettings(next.invoiceSettings);
           setInvoices(next.invoices);
           setCompanySettings(next.companySettings);
+          setCompanyForm(next.companySettings);
           setCompanyProfiles(next.companyProfiles);
           setCustomers(next.customers.length ? next.customers : createDefaultCustomers());
           setServices(next.services.length ? next.services : createDefaultServices());
@@ -639,32 +646,43 @@ export default function Rechnungsprogramm() {
   };
 
   const updateCompanyField = (field, value) => {
-    setCompanySettings((prev) => ({ ...prev, [field]: value }));
-    setInvoice((prev) => ({ ...prev, [field]: value }));
+    setCompanyForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (next.id && next.id === companySettings.id) {
+        setCompanySettings(next);
+        setInvoice((prevInvoice) => applyCompanySettingsToInvoice(prevInvoice, next));
+      }
+      return next;
+    });
   };
 
   const saveCompanyProfile = () => {
-    if (!hasCompanySettings(companySettings)) {
+    if (!hasCompanySettings(companyForm)) {
       showSaveMessage("Bitte zuerst Firmendaten eintragen.");
       return;
     }
 
     const profile = {
-      ...companySettings,
-      id: companySettings.id || createId(),
-      companyName: companySettings.companyName.trim(),
-      companyAddress: companySettings.companyAddress.trim(),
-      companyEmail: companySettings.companyEmail.trim(),
-      companyPhone: companySettings.companyPhone.trim(),
+      ...companyForm,
+      id: editingCompanyId || companyForm.id || createId(),
+      companyName: companyForm.companyName.trim(),
+      companyAddress: companyForm.companyAddress.trim(),
+      companyEmail: companyForm.companyEmail.trim(),
+      companyPhone: companyForm.companyPhone.trim(),
     };
 
-    setCompanySettings(profile);
-    setInvoice((prev) => applyCompanySettingsToInvoice(prev, profile));
+    const shouldActivate = !editingCompanyId || companySettings.id === profile.id;
+    if (shouldActivate) {
+      setCompanySettings(profile);
+      setInvoice((prev) => applyCompanySettingsToInvoice(prev, profile));
+    }
     setCompanyProfiles((prev) => {
       const withoutCurrent = prev.filter((entry) => entry.id !== profile.id);
       return [profile, ...withoutCurrent].slice(0, 50);
     });
-    showSaveMessage("Firmendaten gespeichert.");
+    setCompanyForm(createDefaultCompanySettings());
+    setEditingCompanyId("");
+    showSaveMessage(editingCompanyId ? "Firmendaten aktualisiert." : "Firmendaten gespeichert.");
   };
 
   const applyCompanyProfile = (id) => {
@@ -672,8 +690,20 @@ export default function Rechnungsprogramm() {
     if (!profile) return;
 
     setCompanySettings(profile);
+    setCompanyForm(profile);
+    setEditingCompanyId("");
     setInvoice((prev) => applyCompanySettingsToInvoice(prev, profile));
     showSaveMessage("Firmendaten übernommen.");
+  };
+
+  const editCompanyProfile = (profile) => {
+    setCompanyForm(profile);
+    setEditingCompanyId(profile.id);
+  };
+
+  const cancelCompanyEdit = () => {
+    setCompanyForm(createDefaultCompanySettings());
+    setEditingCompanyId("");
   };
 
   const removeCompanyProfile = (id) => {
@@ -684,6 +714,8 @@ export default function Rechnungsprogramm() {
     if (companySettings.id === id) {
       const emptySettings = createDefaultCompanySettings();
       setCompanySettings(emptySettings);
+      setCompanyForm(emptySettings);
+      setEditingCompanyId("");
       setInvoice((prev) => applyCompanySettingsToInvoice(prev, emptySettings));
     }
     showSaveMessage("Firmenprofil gelöscht.");
@@ -772,16 +804,41 @@ export default function Rechnungsprogramm() {
     if (!newCustomer.name.trim()) return;
     const customer = {
       ...newCustomer,
+      id: editingCustomerId || newCustomer.id || createId(),
       name: newCustomer.name.trim(),
       address: newCustomer.address.trim(),
       email: newCustomer.email.trim(),
     };
-    setCustomers((prev) => [...prev, customer]);
+    setCustomers((prev) => {
+      if (!editingCustomerId) return [...prev, customer];
+      return prev.map((entry) => (entry.id === editingCustomerId ? customer : entry));
+    });
+    if (invoice.customerId === customer.id) {
+      setInvoice((prev) => ({
+        ...prev,
+        customerName: customer.name,
+        customerAddress: customer.address,
+        customerEmail: customer.email,
+      }));
+    }
     setNewCustomer(emptyCustomer());
+    setEditingCustomerId("");
+    showSaveMessage(editingCustomerId ? "Kunde aktualisiert." : "Kunde gespeichert.");
+  };
+
+  const editCustomer = (customer) => {
+    setNewCustomer(customer);
+    setEditingCustomerId(customer.id);
+  };
+
+  const cancelCustomerEdit = () => {
+    setNewCustomer(emptyCustomer());
+    setEditingCustomerId("");
   };
 
   const removeCustomer = (id) => {
     setCustomers((prev) => prev.filter((customer) => customer.id !== id));
+    if (editingCustomerId === id) cancelCustomerEdit();
     setInvoice((prev) =>
       prev.customerId === id ? { ...prev, customerId: "", customerName: "", customerAddress: "", customerEmail: "" } : prev
     );
@@ -793,19 +850,36 @@ export default function Rechnungsprogramm() {
     const service = normalizeServiceEntry({
       ...newService,
       type,
+      id: editingServiceId || newService.id || createId(),
       name: newService.name.trim(),
       unit: type === "service" ? "h" : type === "fixed" ? "Stück" : newService.unit.trim() || "Stück",
       pricePerUnit: Number(newService.pricePerUnit || newService.pricePerHour || 0),
       priceMode: normalizePriceMode(newService.priceMode),
       fuelPerUnit: type === "service" ? Number(newService.fuelPerUnit || newService.fuelPerHour || 0) : 0,
     });
-    setServices((prev) => [...prev, service]);
+    setServices((prev) => {
+      if (!editingServiceId) return [...prev, service];
+      return prev.map((entry) => (entry.id === editingServiceId ? service : entry));
+    });
     setServiceHours((prev) => ({ ...prev, [service.id]: 1 }));
     setNewService(emptyService());
+    setEditingServiceId("");
+    showSaveMessage(editingServiceId ? "Eintrag aktualisiert." : "Eintrag gespeichert.");
+  };
+
+  const editService = (service) => {
+    setNewService(normalizeServiceEntry(service));
+    setEditingServiceId(service.id);
+  };
+
+  const cancelServiceEdit = () => {
+    setNewService(emptyService());
+    setEditingServiceId("");
   };
 
   const removeService = (id) => {
     setServices((prev) => prev.filter((service) => service.id !== id));
+    if (editingServiceId === id) cancelServiceEdit();
     setServiceHours((prev) => {
       const next = { ...prev };
       delete next[id];
@@ -916,10 +990,14 @@ export default function Rechnungsprogramm() {
       setInvoiceSettings(imported.invoiceSettings);
       setInvoices(imported.invoices);
       setCompanySettings(imported.companySettings);
+      setCompanyForm(imported.companySettings);
       setCompanyProfiles(imported.companyProfiles);
       setCustomers(imported.customers.length ? imported.customers : createDefaultCustomers());
       setServices(imported.services.length ? imported.services : createDefaultServices());
       setServiceHours(imported.serviceHours);
+      setEditingCompanyId("");
+      setEditingCustomerId("");
+      setEditingServiceId("");
       await saveAppState(imported);
       showSaveMessage("Backup wurde importiert.");
     } catch (error) {
@@ -958,6 +1036,7 @@ export default function Rechnungsprogramm() {
     const defaultCompanySettings = createDefaultCompanySettings();
     const defaultInvoiceSettings = createDefaultInvoiceSettings();
     setCompanySettings(defaultCompanySettings);
+    setCompanyForm(defaultCompanySettings);
     setCompanyProfiles([]);
     setInvoiceSettings(defaultInvoiceSettings);
     setInvoice(createDefaultInvoice(defaultCompanySettings, defaultInvoiceSettings));
@@ -967,6 +1046,9 @@ export default function Rechnungsprogramm() {
     setServiceHours({});
     setNewCustomer(emptyCustomer());
     setNewService(emptyService());
+    setEditingCompanyId("");
+    setEditingCustomerId("");
+    setEditingServiceId("");
     showSaveMessage("Alle Daten wurden zurückgesetzt.");
   };
 
@@ -1127,14 +1209,20 @@ export default function Rechnungsprogramm() {
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-4 rounded-2xl border p-4 md:grid-cols-2">
-                <Field label="Firmenname"><Input placeholder="z. B. MaschinenLog" value={companySettings.companyName} onChange={(e) => updateCompanyField("companyName", e.target.value)} /></Field>
-                <Field label="E-Mail"><Input placeholder="name@example.de" value={companySettings.companyEmail} onChange={(e) => updateCompanyField("companyEmail", e.target.value)} /></Field>
-                <Field label="Telefon"><Input placeholder="+49 ..." value={companySettings.companyPhone} onChange={(e) => updateCompanyField("companyPhone", e.target.value)} /></Field>
+                <Field label="Firmenname"><Input placeholder="z. B. MaschinenLog" value={companyForm.companyName} onChange={(e) => updateCompanyField("companyName", e.target.value)} /></Field>
+                <Field label="E-Mail"><Input placeholder="name@example.de" value={companyForm.companyEmail} onChange={(e) => updateCompanyField("companyEmail", e.target.value)} /></Field>
+                <Field label="Telefon"><Input placeholder="+49 ..." value={companyForm.companyPhone} onChange={(e) => updateCompanyField("companyPhone", e.target.value)} /></Field>
                 <div className="grid gap-2 md:col-span-2">
                   <Label>Adresse</Label>
-                  <Textarea placeholder={"Straße und Hausnummer\nPLZ Ort"} value={companySettings.companyAddress} onChange={(e) => updateCompanyField("companyAddress", e.target.value)} rows={4} />
+                  <Textarea placeholder={"Straße und Hausnummer\nPLZ Ort"} value={companyForm.companyAddress} onChange={(e) => updateCompanyField("companyAddress", e.target.value)} rows={4} />
                 </div>
-                <Button className="w-full sm:w-auto" onClick={saveCompanyProfile}><Plus className="mr-2 h-4 w-4" /> Firmendaten speichern</Button>
+                <Button className="w-full sm:w-auto" onClick={saveCompanyProfile}>
+                  {editingCompanyId ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                  {editingCompanyId ? "Änderungen speichern" : "Firmendaten speichern"}
+                </Button>
+                {editingCompanyId ? (
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={cancelCompanyEdit}><X className="mr-2 h-4 w-4" /> Abbrechen</Button>
+                ) : null}
               </div>
 
               <div className="grid gap-3">
@@ -1152,16 +1240,27 @@ export default function Rechnungsprogramm() {
                         <p className="mt-1 flex items-center gap-2 break-words text-sm text-slate-600"><Mail className="h-4 w-4" />{profile.companyEmail || "Keine E-Mail"}</p>
                         <p className="break-words text-sm text-slate-600">{profile.companyPhone || "Keine Telefonnummer"}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeCompanyProfile(profile.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            editCompanyProfile(profile);
+                          }}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" /> Bearbeiten
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeCompanyProfile(profile.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </button>
                   ))
                 ) : (
@@ -1188,7 +1287,13 @@ export default function Rechnungsprogramm() {
                   <Label>Adresse</Label>
                   <Textarea value={newCustomer.address} onChange={(e) => setNewCustomer((prev) => ({ ...prev, address: e.target.value }))} rows={3} />
                 </div>
-                <Button className="w-full sm:w-auto" onClick={addCustomer}><Plus className="mr-2 h-4 w-4" /> Kunde speichern</Button>
+                <Button className="w-full sm:w-auto" onClick={addCustomer}>
+                  {editingCustomerId ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                  {editingCustomerId ? "Änderungen speichern" : "Kunde speichern"}
+                </Button>
+                {editingCustomerId ? (
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={cancelCustomerEdit}><X className="mr-2 h-4 w-4" /> Abbrechen</Button>
+                ) : null}
               </div>
 
               <div className="grid gap-3">
@@ -1204,16 +1309,27 @@ export default function Rechnungsprogramm() {
                       <p className="whitespace-pre-line break-words text-sm text-slate-600">{customer.address || "Keine Adresse"}</p>
                       <p className="mt-1 flex items-center gap-2 break-words text-sm text-slate-600"><Mail className="h-4 w-4" />{customer.email || "Keine E-Mail"}</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeCustomer(customer.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          editCustomer(customer);
+                        }}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" /> Bearbeiten
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeCustomer(customer.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -1259,7 +1375,13 @@ export default function Rechnungsprogramm() {
                     <Input type="number" min="0" step="0.01" value={newService.fuelPerUnit || newService.fuelPerHour} onChange={(e) => setNewService((prev) => ({ ...prev, fuelPerUnit: e.target.value, fuelPerHour: e.target.value }))} />
                   </Field>
                 ) : null}
-                <Button className="w-full sm:w-auto" onClick={addService}><Plus className="mr-2 h-4 w-4" /> Eintrag speichern</Button>
+                <Button className="w-full sm:w-auto" onClick={addService}>
+                  {editingServiceId ? <Save className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                  {editingServiceId ? "Änderungen speichern" : "Eintrag speichern"}
+                </Button>
+                {editingServiceId ? (
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={cancelServiceEdit}><X className="mr-2 h-4 w-4" /> Abbrechen</Button>
+                ) : null}
                 <p className="text-sm text-slate-500 md:col-span-3">
                   Bei Bruttopreisen wird der vereinbarte Endpreis automatisch in Netto und MwSt. umgerechnet.
                 </p>
@@ -1282,9 +1404,10 @@ export default function Rechnungsprogramm() {
                           Vorschau: {currency(previewAmount)}{previewFuel > 0 ? ` · Diesel: ${formatFuel(previewFuel)}` : ""}
                         </p>
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-[140px_auto_auto] sm:items-end">
+                      <div className="grid gap-3 sm:grid-cols-[140px_auto_auto_auto] sm:items-end">
                         <Field label={entry.type === "service" ? "Stunden" : "Menge"}><Input type="number" min="0.25" step="0.25" value={selectedHours} onChange={(e) => setServiceHours((prev) => ({ ...prev, [service.id]: e.target.value }))} /></Field>
                         <Button onClick={() => addServiceToInvoice(service.id)}><Plus className="mr-2 h-4 w-4" /> Zur Rechnung</Button>
+                        <Button variant="outline" onClick={() => editService(service)}><Pencil className="mr-2 h-4 w-4" /> Bearbeiten</Button>
                         <Button variant="ghost" size="icon" onClick={() => removeService(service.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
