@@ -8,9 +8,4 @@ dist
 !licht-im-feld/dist/**
 build
 .vscode/settings.json
-LeadPilot-Scraper-v5/backend/
-LeadPilot-Scraper-v5/frontend/
-LeadPilot-Scraper-v5/data/
-LeadPilot-Scraper-v5/package.json
-LeadPilot-Scraper-v5/package-lock.json
-LeadPilot-Scraper-v5/start-windows.bat
+LeadPilot-Scraper-v5/node_modules/

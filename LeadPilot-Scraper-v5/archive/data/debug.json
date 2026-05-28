@@ -1,0 +1,689 @@
+{
+  "startedAt": "2026-05-27T11:10:24.979Z",
+  "queries": [
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Steinburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Steinburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Steinburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Steinburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Steinburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Steinburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Steinburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Steinburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Steinburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Dithmarschen\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Dithmarschen Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Dithmarschen Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Dithmarschen\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Dithmarschen Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Dithmarschen Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Dithmarschen\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Dithmarschen Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Dithmarschen Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Pinneberg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Pinneberg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Pinneberg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Pinneberg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Pinneberg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Pinneberg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Pinneberg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Pinneberg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Pinneberg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Segeberg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Segeberg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Segeberg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Segeberg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Segeberg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Segeberg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Segeberg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Segeberg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Segeberg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Rendsburg-Eckernförde\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Rendsburg-Eckernförde Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Rendsburg-Eckernförde Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Rendsburg-Eckernförde\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Rendsburg-Eckernförde Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Rendsburg-Eckernförde Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Rendsburg-Eckernförde\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Rendsburg-Eckernförde Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Rendsburg-Eckernförde Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Nordfriesland\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Nordfriesland Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Nordfriesland Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Nordfriesland\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Nordfriesland Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Nordfriesland Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Nordfriesland\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Nordfriesland Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Nordfriesland Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Schleswig-Flensburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Schleswig-Flensburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Schleswig-Flensburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Schleswig-Flensburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Schleswig-Flensburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Schleswig-Flensburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Schleswig-Flensburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Schleswig-Flensburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Schleswig-Flensburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Plön\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Plön Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Plön Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Plön\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Plön Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Plön Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Plön\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Plön Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Plön Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Ostholstein\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Ostholstein Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Ostholstein Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Ostholstein\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Ostholstein Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Ostholstein Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Ostholstein\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Ostholstein Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Ostholstein Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Herzogtum Lauenburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Herzogtum Lauenburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Herzogtum Lauenburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Herzogtum Lauenburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Herzogtum Lauenburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Herzogtum Lauenburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Herzogtum Lauenburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Herzogtum Lauenburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Herzogtum Lauenburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Stormarn\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Stormarn Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Stormarn Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Stormarn\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Stormarn Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Stormarn Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Stormarn\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Stormarn Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Stormarn Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Lübeck\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Lübeck Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Lübeck Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Lübeck\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Lübeck Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Lübeck Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Lübeck\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Lübeck Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Lübeck Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Kiel\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Kiel Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Kiel Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Kiel\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Kiel Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Kiel Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Kiel\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Kiel Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Kiel Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Neumünster\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Neumünster Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Neumünster Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Neumünster\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Neumünster Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Neumünster Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Neumünster\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Neumünster Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Neumünster Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landmaschinen\" \"Flensburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Flensburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landmaschinen Flensburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Tracktor\" \"Flensburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Flensburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Tracktor Flensburg Impressum",
+      "hits": 0
+    },
+    {
+      "engine": "duck",
+      "query": "\"Landwirtschaft\" \"Flensburg\"",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Flensburg Kontakt",
+      "hits": 0
+    },
+    {
+      "engine": "bing",
+      "query": "Landwirtschaft Flensburg Impressum",
+      "hits": 0
+    }
+  ],
+  "hits": 0,
+  "enriched": 0,
+  "saved": {
+    "added": 0,
+    "updated": 0,
+    "skipped": 0,
+    "total": 0
+  },
+  "finishedAt": "2026-05-27T11:11:49.196Z"
+}

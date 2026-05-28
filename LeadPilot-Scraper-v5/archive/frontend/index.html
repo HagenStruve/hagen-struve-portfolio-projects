@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>LeadPilot Scraper v5</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Lokaler Lead-Recherche-Assistent</p>
+        <h1>LeadPilot Scraper v5</h1>
+        <p>Segmentierte Rohdaten-Suche mit DuckDuckGo + Bing-Fallback und Debug-Anzeige.</p>
+      </div>
+      <div class="status"><span id="dot"></span><b id="status">Prüfe Backend…</b><small>http://localhost:8787</small></div>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <h2>1. Suchauftrag</h2>
+        <label>Ziel für ChatGPT</label>
+        <textarea id="goal" rows="3">Bereinige Landtechnik-Leads für MaschinenLog.</textarea>
+
+        <div class="two">
+          <div>
+            <label>Bundesland</label>
+            <select id="state"></select>
+          </div>
+          <div>
+            <label>Max. Rohdaten pro Kreis</label>
+            <select id="maxPerDistrict">
+              <option>10</option><option selected>25</option><option>50</option><option>80</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Suchbegriffe, optional mit Komma getrennt</label>
+        <input id="customTerms" placeholder="leer lassen = Standard-Landtechnik-Suchbegriffe"/>
+
+        <label>Modus</label>
+        <select id="mode">
+          <option value="raw" selected>Rohdaten sammeln: mehr Masse, ChatGPT sortiert</option>
+          <option value="balanced">Ausgewogener Filter: weniger, aber sauberer</option>
+        </select>
+
+        <div class="actions">
+          <button id="generateBtn" class="secondary">Suchabfragen anzeigen</button>
+          <button id="scrapeBtn">🚀 Rohdaten generieren</button>
+        </div>
+        <p id="msg" class="message"></p>
+      </section>
+
+      <section class="card">
+        <h2>2. Kreise auswählen</h2>
+        <div class="actions">
+          <button id="allBtn" class="secondary">Alle auswählen</button>
+          <button id="noneBtn" class="secondary">Keine</button>
+        </div>
+        <div id="districts" class="districts"></div>
+      </section>
+
+      <section class="card wide">
+        <div class="head">
+          <div>
+            <h2>3. Rohdaten</h2>
+            <p>Das ist bewusst eine Rohdatenliste. Die saubere Bewertung macht ChatGPT.</p>
+          </div>
+          <div class="actions">
+            <a class="button secondary" href="/api/export.csv">CSV exportieren</a>
+            <button id="promptBtn" class="secondary">ChatGPT-Prompt erzeugen</button>
+            <button id="copyBtn" class="secondary">Prompt kopieren</button>
+            <button id="debugBtn" class="secondary">Debug anzeigen</button>
+            <button id="clearBtn" class="danger">Liste leeren</button>
+          </div>
+        </div>
+        <textarea id="prompt" rows="8" readonly placeholder="Hier erscheint der ChatGPT-Prompt…"></textarea>
+        <pre id="debugBox" class="debug" style="display:none"></pre>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Score</th><th>Region</th><th>Firma</th><th>Kontakt</th><th>Suchbegriff</th><th>Notiz</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card wide">
+        <h2>Suchabfragen</h2>
+        <div id="queries" class="queries"></div>
+      </section>
+    </main>
+  </div>
+<script src="app.js"></script>
+</body>
+</html>

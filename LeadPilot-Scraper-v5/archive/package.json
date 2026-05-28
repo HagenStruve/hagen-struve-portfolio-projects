@@ -1,0 +1,16 @@
+{
+  "name": "leadpilot-scraper-v4",
+  "version": "1.5.0",
+  "description": "LeadPilot Scraper v5 mit Bing-Fallback und Debug-Ausgabe",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js"
+  },
+  "author": "Hagen Struve",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "cheerio": "^1.0.0"
+  }
+}

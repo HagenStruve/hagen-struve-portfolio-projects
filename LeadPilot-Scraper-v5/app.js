@@ -1,180 +1,108 @@
-const form = document.querySelector("#leadForm");
-const demoButton = document.querySelector("#demoBtn");
-const csvButton = document.querySelector("#csvBtn");
-const jsonButton = document.querySelector("#jsonBtn");
-const rows = document.querySelector("#leadRows");
-const statusLine = document.querySelector("#statusLine");
-const leadCount = document.querySelector("#leadCount");
-const sourceLabel = document.querySelector("#sourceLabel");
-const apiKeyInput = document.querySelector("#apiKey");
+import { fetchGooglePlacesLeads } from "./js/api/google-places.js";
+import { createDemoLeads } from "./js/demo-data.js";
+import { buildCsv, buildJsonPayload, buildLlmPrompt, downloadFile } from "./js/export.js";
+import { scoreLead } from "./js/scoring.js";
+import { createInitialState, getFilteredLeads, updateLead } from "./js/state.js";
+import { loadState, saveState } from "./js/storage.js";
+import { bindUi, getFormParams, hydrateForm, renderApp, setStatus } from "./js/ui.js";
 
-const storageKey = "leadpilot-api-key";
-let leads = [];
+let state = createInitialState(loadState());
+state.leads = state.leads.map((lead) => normalizeStoredLead(lead));
 
-apiKeyInput.value = localStorage.getItem(storageKey) || "";
-apiKeyInput.addEventListener("input", () => {
-  localStorage.setItem(storageKey, apiKeyInput.value.trim());
+hydrateForm(state);
+renderApp(state, getFilteredLeads(state));
+
+bindUi({
+  state,
+  onParamsChange: (params) => {
+    state.searchParams = params;
+    saveAndRender();
+  },
+  onFiltersChange: (filters) => {
+    state.filters = filters;
+    saveAndRender();
+  },
+  onSearch: async () => {
+    state.searchParams = getFormParams();
+
+    if (state.searchParams.apiKey) {
+      const preparedResult = await fetchGooglePlacesLeads(state.searchParams);
+      setStatus(preparedResult.message);
+    } else {
+      setStatus("Kein API-Key gesetzt. LeadPilot erzeugt sichere Demo-Leads.");
+    }
+
+    state.leads = createScoredLeads(true);
+    saveAndRender();
+  },
+  onDemo: () => {
+    state.searchParams = getFormParams();
+    state.leads = createScoredLeads(false);
+    setStatus("Demo-Leads wurden lokal erzeugt und bewertet.");
+    saveAndRender();
+  },
+  onLeadStatusChange: (leadId, status) => {
+    state = updateLead(state, leadId, { status });
+    saveAndRender();
+  },
+  onLeadNotesChange: (leadId, notes) => {
+    state = updateLead(state, leadId, { notes });
+    saveState(state);
+  },
+  onExportCsv: () => {
+    const leads = getFilteredLeads(state);
+    if (!ensureLeads(leads)) return;
+    downloadFile("leadpilot-leads.csv", buildCsv(leads), "text/csv;charset=utf-8");
+    setStatus("CSV-Export wurde erzeugt.");
+  },
+  onExportJson: () => {
+    const leads = getFilteredLeads(state);
+    if (!ensureLeads(leads)) return;
+    const payload = buildJsonPayload(leads, state.searchParams);
+    downloadFile("leadpilot-leads.json", JSON.stringify(payload, null, 2), "application/json");
+    setStatus("JSON-Export wurde erzeugt.");
+  },
+  onBuildPrompt: () => {
+    const leads = getFilteredLeads(state);
+    if (!ensureLeads(leads)) return;
+    renderApp(state, leads, buildLlmPrompt(leads, state.searchParams));
+    setStatus("LLM-Prompt wurde erzeugt.");
+  }
 });
 
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-  createDemoLeads(true);
-});
-
-demoButton.addEventListener("click", () => createDemoLeads(false));
-csvButton.addEventListener("click", exportCsv);
-jsonButton.addEventListener("click", exportJson);
-
-function getParams() {
-  return {
-    keyword: valueOf("keyword", "Lead"),
-    state: valueOf("state", "Bundesland"),
-    region: valueOf("region", "Region"),
-    city: valueOf("city", "Stadt"),
-    limit: clamp(Number(valueOf("limit", "12")), 3, 50),
-    hasApiKey: Boolean(apiKeyInput.value.trim())
-  };
-}
-
-function valueOf(id, fallback) {
-  const value = document.querySelector(`#${id}`).value.trim();
-  return value || fallback;
-}
-
-function clamp(value, min, max) {
-  if (Number.isNaN(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}
-
-function createDemoLeads(apiPreparedMode) {
-  const params = getParams();
-  const categories = [
-    params.keyword,
-    `${params.keyword} Service`,
-    `${params.keyword} Handel`,
-    `${params.keyword} Beratung`,
-    `${params.keyword} Technik`
-  ];
-  const companyWords = ["Nord", "Hof", "Feld", "Werk", "Regional", "Partner", "Digital", "Pro"];
-  const streets = ["Hauptstrasse", "Industrieweg", "Am Markt", "Werkstrasse", "Dorfstrasse", "Muehlenweg"];
-
-  leads = Array.from({ length: params.limit }, (_, index) => {
-    const word = companyWords[index % companyWords.length];
-    const category = categories[index % categories.length];
-    const number = 12 + index * 3;
-    const source = apiPreparedMode && params.hasApiKey ? "Google API vorbereitet" : "Demo";
-
+function createScoredLeads(apiPreparedMode) {
+  return createDemoLeads(state.searchParams, apiPreparedMode).map((lead) => {
+    const scored = scoreLead(lead, state.searchParams.keyword);
     return {
-      company: `${word} ${params.keyword} ${index + 1}`,
-      category,
-      address: `${streets[index % streets.length]} ${number}`,
-      city: index % 3 === 0 ? params.city : params.region,
-      phone: `+49 ${4300 + index} ${120000 + index * 137}`,
-      website: `https://example-lead-${index + 1}.de`,
-      email: index % 2 === 0 ? `kontakt@lead-${index + 1}.de` : "",
-      source,
-      notes: `Region: ${params.region}, ${params.state}. Für LLM-Priorisierung exportierbar.`
+      ...lead,
+      ...scored,
+      status: lead.status || "Neu"
     };
   });
-
-  renderLeads();
-  statusLine.textContent = apiPreparedMode && params.hasApiKey
-    ? "API-Workflow vorbereitet. In dieser Portfolio-Version werden sichere Demo-Leads erzeugt."
-    : "Demo-Leads wurden lokal erzeugt.";
-  sourceLabel.textContent = `Quelle: ${leads[0]?.source || "Demo/API vorbereitet"}`;
 }
 
-function renderLeads() {
-  leadCount.textContent = String(leads.length);
+function normalizeStoredLead(lead) {
+  const scored = typeof lead.score === "number" && lead.priority
+    ? { score: lead.score, priority: lead.priority, scoreReasons: lead.scoreReasons || [] }
+    : scoreLead(lead, state.searchParams.keyword);
 
-  if (!leads.length) {
-    rows.innerHTML = `<tr><td colspan="9" class="empty">Noch keine Leads. Starte den Demo-Modus oder eine vorbereitete Suche.</td></tr>`;
-    return;
-  }
-
-  rows.innerHTML = leads.map((lead) => `
-    <tr>
-      <td>${escapeHtml(lead.company)}</td>
-      <td>${escapeHtml(lead.category)}</td>
-      <td>${escapeHtml(lead.address)}</td>
-      <td>${escapeHtml(lead.city)}</td>
-      <td>${escapeHtml(lead.phone)}</td>
-      <td><a href="${escapeAttribute(lead.website)}" target="_blank" rel="noopener noreferrer">Website</a></td>
-      <td>${escapeHtml(lead.email || "-")}</td>
-      <td>${escapeHtml(lead.source)}</td>
-      <td>${escapeHtml(lead.notes)}</td>
-    </tr>
-  `).join("");
-}
-
-function exportCsv() {
-  if (!ensureLeads()) return;
-
-  const headers = ["Firmenname", "Kategorie", "Adresse", "Ort", "Telefon", "Website", "E-Mail", "Quelle", "Notizen"];
-  const csvRows = [
-    headers,
-    ...leads.map((lead) => [
-      lead.company,
-      lead.category,
-      lead.address,
-      lead.city,
-      lead.phone,
-      lead.website,
-      lead.email,
-      lead.source,
-      lead.notes
-    ])
-  ];
-
-  const csv = csvRows.map((row) => row.map(csvCell).join(";")).join("\n");
-  downloadFile("leadpilot-leads.csv", `\uFEFF${csv}`, "text/csv;charset=utf-8");
-  statusLine.textContent = "CSV-Export wurde erzeugt.";
-}
-
-function exportJson() {
-  if (!ensureLeads()) return;
-
-  const payload = {
-    exportedAt: new Date().toISOString(),
-    workflow: "LeadPilot Demo/API-first Export für LLM-Auswertung",
-    leads
+  return {
+    ...lead,
+    id: lead.id || `lead-${globalThis.crypto?.randomUUID?.() || Date.now()}`,
+    status: lead.status || "Neu",
+    tags: Array.isArray(lead.tags) ? lead.tags : [lead.category, lead.city].filter(Boolean),
+    notes: lead.notes || "",
+    ...scored
   };
-
-  downloadFile("leadpilot-leads.json", JSON.stringify(payload, null, 2), "application/json");
-  statusLine.textContent = "JSON-Export wurde erzeugt.";
 }
 
-function ensureLeads() {
+function saveAndRender() {
+  saveState(state);
+  renderApp(state, getFilteredLeads(state));
+}
+
+function ensureLeads(leads) {
   if (leads.length) return true;
-  statusLine.textContent = "Bitte zuerst Demo-Leads erzeugen.";
+  setStatus("Bitte zuerst Leads erzeugen oder Filter lockern.");
   return false;
-}
-
-function downloadFile(filename, content, type) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
-function csvCell(value) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function escapeAttribute(value) {
-  return escapeHtml(value).replaceAll("`", "&#096;");
 }
