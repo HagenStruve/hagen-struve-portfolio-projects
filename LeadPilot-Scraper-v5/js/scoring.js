@@ -27,9 +27,15 @@ export function scoreLead(lead, keyword = "") {
     reasons.push("Kategorie passt zum Suchbegriff");
   }
 
-  if (Number(lead.reviews) >= 50) {
+  const ratingsCount = Number(lead.userRatingsTotal || lead.reviews || 0);
+  if (ratingsCount >= 50) {
     score += 10;
     reasons.push("Viele Bewertungen vorbereitet");
+  }
+
+  if (Number(lead.rating) >= 4.3) {
+    score += 8;
+    reasons.push("Gutes Google Rating");
   }
 
   if (hasValue(lead.email)) {

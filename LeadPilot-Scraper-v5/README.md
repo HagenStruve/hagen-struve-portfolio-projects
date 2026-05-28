@@ -22,23 +22,27 @@ Typischer Workflow:
 4. CSV, JSON oder LLM-Prompt exportieren.
 5. Leads extern priorisieren, clustern und bewerten.
 
-## API-first Ansatz
+## Google Places API
 
-Die App ist bewusst API-first vorbereitet:
+Die App unterstützt einen offiziellen Google-Places-API-Flow über die statische Browser-App:
 
 - keine aggressive Scraping-Logik
 - keine Umgehung von Google-/Maps-Schutzmechanismen
-- Google Places/Maps API als getrennter Adapter vorbereitet
+- Google Places/Maps API als getrennter Adapter
 - API-Key bleibt lokal im Browser
 - keine API-Keys im Repository
+- bei fehlendem API-Key läuft automatisch der Demo-Modus
+- bei API-/CORS-/Quota-Problemen zeigt die UI eine verständliche Fehlermeldung
 
-Die vorbereitete API-Schicht liegt hier:
+Die API-Schicht liegt hier:
 
 ```text
 js/api/google-places.js
 ```
 
-Aktuell sendet diese Datei noch keine produktiven externen Requests.
+Für produktive Nutzung muss der Google Cloud API-Key korrekt auf die Places API berechtigt und sinnvoll eingeschränkt sein. Google Places API kann Kosten verursachen.
+
+Hinweis: Je nach API-Key-Restriktionen und Browserumgebung kann eine direkte Browser-Anfrage blockiert werden. Für eine spätere SaaS-Version ist ein sicherer Backend-Proxy empfehlenswert, damit API-Keys nicht clientseitig sichtbar sind.
 
 ## Demo-Modus
 
@@ -115,6 +119,9 @@ Die Exporte enthalten unter anderem:
 - Status
 - Tags
 - Notizen
+- Rating
+- Anzahl Bewertungen
+- Google Maps Link
 - Exportzeitpunkt
 
 ## Archiv

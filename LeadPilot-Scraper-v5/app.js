@@ -1,4 +1,4 @@
-import { fetchGooglePlacesLeads } from "./js/api/google-places.js";
+import { searchGooglePlaces } from "./js/api/google-places.js";
 import { createDemoLeads } from "./js/demo-data.js";
 import { buildCsv, buildJsonPayload, buildLlmPrompt, downloadFile } from "./js/export.js";
 import { scoreLead } from "./js/scoring.js";
@@ -26,18 +26,29 @@ bindUi({
     state.searchParams = getFormParams();
 
     if (state.searchParams.apiKey) {
-      const preparedResult = await fetchGooglePlacesLeads(state.searchParams);
-      setStatus(preparedResult.message);
+      setStatus("Google Places Suche läuft...");
+      const result = await searchGooglePlaces(state.searchParams);
+      setStatus(result.message);
+
+      if (result.leads.length) {
+        state.leads = result.leads.map((lead) => applyScore(lead));
+        saveAndRender();
+      } else if (!result.error) {
+        state.leads = [];
+        saveAndRender();
+      }
+
+      return;
     } else {
-      setStatus("Kein API-Key gesetzt. LeadPilot erzeugt sichere Demo-Leads.");
+      setStatus("Kein API-Key gesetzt. Demo-Modus aktiv.");
     }
 
-    state.leads = createScoredLeads(true);
+    state.leads = createDemoScoredLeads(true);
     saveAndRender();
   },
   onDemo: () => {
     state.searchParams = getFormParams();
-    state.leads = createScoredLeads(false);
+    state.leads = createDemoScoredLeads(false);
     setStatus("Demo-Leads wurden lokal erzeugt und bewertet.");
     saveAndRender();
   },
@@ -70,15 +81,17 @@ bindUi({
   }
 });
 
-function createScoredLeads(apiPreparedMode) {
-  return createDemoLeads(state.searchParams, apiPreparedMode).map((lead) => {
-    const scored = scoreLead(lead, state.searchParams.keyword);
-    return {
-      ...lead,
-      ...scored,
-      status: lead.status || "Neu"
-    };
-  });
+function createDemoScoredLeads(apiPreparedMode) {
+  return createDemoLeads(state.searchParams, apiPreparedMode).map((lead) => applyScore(lead));
+}
+
+function applyScore(lead) {
+  const scored = scoreLead(lead, state.searchParams.keyword);
+  return {
+    ...lead,
+    ...scored,
+    status: lead.status || "Neu"
+  };
 }
 
 function normalizeStoredLead(lead) {

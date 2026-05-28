@@ -279,6 +279,7 @@ textarea:focus {
 }
 
 .helper,
+.api-cost-note,
 .status-line,
 .workflow-card li,
 .metrics,
@@ -290,6 +291,11 @@ textarea:focus {
 
 .helper {
   margin: 20px 0 0;
+}
+
+.api-cost-note {
+  margin: 16px 0 0;
+  font-size: 13px;
 }
 
 .actions {

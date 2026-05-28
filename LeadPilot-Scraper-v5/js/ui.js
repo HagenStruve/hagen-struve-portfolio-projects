@@ -185,7 +185,9 @@ function renderRows(leads) {
       <td>
         ${lead.phone ? `<div>${escapeHtml(lead.phone)}</div>` : `<span class="muted">Keine Telefonnummer</span>`}
         ${lead.website ? `<a href="${escapeAttribute(lead.website)}" target="_blank" rel="noopener noreferrer">Website</a>` : `<span class="muted">Keine Website</span>`}
+        ${lead.googleMapsUri ? `<a href="${escapeAttribute(lead.googleMapsUri)}" target="_blank" rel="noopener noreferrer">Google Maps</a>` : ""}
         ${lead.email ? `<div>${escapeHtml(lead.email)}</div>` : `<span class="muted">Keine E-Mail</span>`}
+        ${renderRating(lead)}
       </td>
       <td>
         <select class="status-select" data-status="${escapeAttribute(lead.id)}">
@@ -201,6 +203,11 @@ function renderRows(leads) {
 
 function renderTags(tags = []) {
   return tags.slice(0, 4).map((tag) => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join("");
+}
+
+function renderRating(lead) {
+  if (!lead.rating && !lead.userRatingsTotal) return "";
+  return `<div class="subline">Rating: ${escapeHtml(lead.rating || "-")} (${escapeHtml(lead.userRatingsTotal || 0)} Bewertungen)</div>`;
 }
 
 async function copyPrompt() {
