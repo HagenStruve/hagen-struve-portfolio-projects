@@ -6,7 +6,6 @@ const overpassTimeoutSeconds = 20;
 const blockedCategoriesForAgriSearch = new Set([
   "bicycle",
   "mobile_phone",
-  "metal_construction",
   "restaurant",
   "pharmacy",
   "school",
@@ -38,6 +37,7 @@ const branchProfiles = [
       "agrartechnik",
       "agrar",
       "traktoren",
+      "tractor",
       "trecker",
       "landmaschinenhandel",
       "landmaschinenwerkstatt",
@@ -47,7 +47,23 @@ const branchProfiles = [
       "erntetechnik",
       "melktechnik",
       "lohnunternehmen",
-      "agrarservice"
+      "agrarservice",
+      "agricultural_machinery",
+      "farm_equipment"
+    ],
+    relatedTerms: [
+      "maschinenbau",
+      "metallbau",
+      "werkstatt",
+      "mechanic",
+      "motorgeraete",
+      "motorgeräte",
+      "handel",
+      "trade",
+      "hardware",
+      "construction",
+      "engineering",
+      "metal_construction"
     ]
   },
   {
@@ -104,6 +120,21 @@ const strictAgriculturalTagTerms = [
   "farm_equipment"
 ];
 
+const relatedTagTerms = [
+  "maschinenbau",
+  "metallbau",
+  "werkstatt",
+  "mechanic",
+  "motorgeraete",
+  "motorgeräte",
+  "handel",
+  "trade",
+  "hardware",
+  "construction",
+  "engineering",
+  "metal_construction"
+];
+
 const genericRelevantTagValues = [
   ["shop", "trade"],
   ["shop", "hardware"],
@@ -141,9 +172,14 @@ export async function searchOverpassLeads(params) {
     const mappedLeads = elements
       .map((element) => mapOsmElementToLead(element, params, terms))
       .filter(Boolean);
-    const relevantLeads = mappedLeads.filter((lead) => isRelevantOsmLead(lead, terms, profile));
-    const leads = relevantLeads.slice(0, getLimit(params));
-    const keywordControls = buildKeywordControls(terms, relevantLeads, mappedLeads.length - relevantLeads.length);
+    const classifiedLeads = mappedLeads.map((lead) => classifyOsmLead(lead, terms, profile));
+    const blockedLeads = classifiedLeads.filter((lead) => lead.relevance === "blocked");
+    const leads = classifiedLeads
+      .filter((lead) => lead.relevance !== "blocked")
+      .slice(0, getLimit(params));
+    const highCount = leads.filter((lead) => lead.relevance === "high").length;
+    const relatedCount = leads.filter((lead) => lead.relevance === "related").length;
+    const keywordControls = buildKeywordControls(terms, leads, blockedLeads);
 
     if (!leads.length) {
       return {
@@ -154,10 +190,14 @@ export async function searchOverpassLeads(params) {
       };
     }
 
+    const relevanceMessage = highCount
+      ? `${highCount} direkte Treffer und ${relatedCount} verwandte Betriebe geladen.`
+      : "Keine direkten Landtechnik-Treffer gefunden. Es werden verwandte Betriebe angezeigt, die du prüfen kannst.";
+
     return {
       leads,
       keywordControls,
-      message: `${leads.length} relevante OpenStreetMap-Leads geladen. ${keywordControls.removedCount} irrelevante Treffer entfernt. Kostenlose OSM-Daten. Telefonnummern/Websites können fehlen.`,
+      message: `${relevanceMessage} ${keywordControls.removedCount} blockierte OSM-Treffer entfernt. Kostenlose OSM-Daten. Telefonnummern/Websites können fehlen.`,
       usedApi: true
     };
   } catch (error) {
@@ -186,8 +226,8 @@ area["name"="${areaName}"]["boundary"="administrative"]->.searchArea;
   nwr["operator"~"${regex}",i](area.searchArea);
   nwr["description"~"${regex}",i](area.searchArea);
   nwr["shop"~"^(agrarian|trade|hardware)$",i](area.searchArea);
-  nwr["craft"~"^(agricultural_engines|mechanic)$",i](area.searchArea);
-  nwr["industrial"~"^(machinery)$",i](area.searchArea);
+  nwr["craft"~"^(agricultural_engines|mechanic|metal_construction)$",i](area.searchArea);
+  nwr["industrial"~"^(machinery|factory)$",i](area.searchArea);
   nwr["office"="company"]["name"~"${regex}",i](area.searchArea);
   nwr["landuse"="farmyard"]["name"~"${regex}",i](area.searchArea);
 );
@@ -231,6 +271,7 @@ export function mapOsmElementToLead(element, params = {}, terms = getSearchTerms
     osmId: element.id,
     osmTags: tags,
     matchedTerms,
+    relevance: "unmatched",
     source: "OpenStreetMap",
     status: "Neu",
     tags: [category, city, "OpenStreetMap"].filter(Boolean),
@@ -239,26 +280,36 @@ export function mapOsmElementToLead(element, params = {}, terms = getSearchTerms
 }
 
 export function isRelevantOsmLead(lead, terms = [], profile = getSearchProfile("")) {
+  return classifyOsmLead({ ...lead }, terms, profile).relevance !== "blocked";
+}
+
+export function classifyOsmLead(lead, terms = [], profile = getSearchProfile("")) {
   const tags = lead.osmTags || {};
   const strictAgriculture = Boolean(profile.strictAgriculture);
 
   if (strictAgriculture && hasBlockedCategory(tags)) {
-    lead.filteredReason = "blocked-category";
-    return false;
+    return withRelevance(lead, "blocked", "blocked-category");
   }
 
   if (strictAgriculture) {
-    const strictMatches = (lead.matchedTerms || []).filter((term) => !broadTermsThatNeedAgriculture.has(normalizeText(term)));
-    if (strictMatches.length) return true;
+    const strictMatches = (lead.matchedTerms || []).filter((term) => !isRelatedOnlyTerm(term));
+    const agriculturalTagMatches = getStrongAgriculturalMatches(tags);
+    if (strictMatches.length || agriculturalTagMatches.length) {
+      lead.matchedTerms = mergeTerms(lead.matchedTerms, agriculturalTagMatches);
+      return withRelevance(lead, "high");
+    }
 
-    if (hasStrongAgriculturalTag(tags)) return true;
+    const relatedMatches = getRelatedMatches(tags, lead);
+    if (relatedMatches.length) {
+      lead.matchedTerms = mergeTerms(lead.matchedTerms, relatedMatches);
+      return withRelevance(lead, "related", "", "Prüfen");
+    }
 
-    lead.filteredReason = "no-agricultural-match";
-    return false;
+    return withRelevance(lead, "unmatched", "no-direct-or-related-match", "Prüfen");
   }
 
-  if (lead.matchedTerms?.length) return true;
-  if (hasGenericRelevantTag(tags)) return true;
+  if (lead.matchedTerms?.length) return withRelevance(lead, "high");
+  if (hasGenericRelevantTag(tags)) return withRelevance(lead, "related", "", "Prüfen");
 
   const searchable = normalizeText([
     lead.company,
@@ -269,22 +320,21 @@ export function isRelevantOsmLead(lead, terms = [], profile = getSearchProfile("
   ].join(" "));
   const termHit = terms.some((term) => searchable.includes(normalizeText(term)));
 
-  if (!termHit) lead.filteredReason = "no-keyword-or-profile-match";
-  return termHit;
+  return termHit
+    ? withRelevance(lead, "high")
+    : withRelevance(lead, "unmatched", "no-keyword-or-profile-match", "Prüfen");
 }
 
 export function getSearchTerms(keyword = "") {
   const profile = getSearchProfile(keyword);
   const rawTerms = profile.id === "default"
     ? [keyword]
-    : [...profile.terms, keyword];
+    : [...profile.terms, ...(profile.relatedTerms || []), keyword];
   const seen = new Set();
 
   return rawTerms.filter((term) => {
     const normalizedTerm = normalizeText(term);
     if (!normalizedTerm || seen.has(normalizedTerm)) return false;
-    if (profile.id === "landtechnik" && broadTermsThatNeedAgriculture.has(normalizedTerm)) return false;
-
     seen.add(normalizedTerm);
     return true;
   });
@@ -303,9 +353,49 @@ function hasBlockedCategory(tags) {
   });
 }
 
-function hasStrongAgriculturalTag(tags) {
+function getStrongAgriculturalMatches(tags) {
   const values = normalizeText(Object.values(tags).join(" "));
-  return strictAgriculturalTagTerms.some((term) => values.includes(normalizeText(term)));
+  return strictAgriculturalTagTerms.filter((term) => values.includes(normalizeText(term)));
+}
+
+function getRelatedMatches(tags, lead) {
+  const searchable = normalizeText([
+    lead.company,
+    lead.category,
+    tags.description,
+    tags.shop,
+    tags.craft,
+    tags.office,
+    tags.industrial,
+    tags.operator,
+    tags.brand
+  ].join(" "));
+
+  return relatedTagTerms.filter((term) => searchable.includes(normalizeText(term)));
+}
+
+function isRelatedOnlyTerm(term) {
+  return broadTermsThatNeedAgriculture.has(normalizeText(term)) || relatedTagTerms.some((relatedTerm) => normalizeText(relatedTerm) === normalizeText(term));
+}
+
+function withRelevance(lead, relevance, filteredReason = "", status = lead.status || "Neu") {
+  return {
+    ...lead,
+    relevance,
+    filteredReason,
+    status,
+    tags: [relevance === "related" ? "Prüfen" : "", ...(lead.tags || [])].filter(Boolean)
+  };
+}
+
+function mergeTerms(currentTerms = [], newTerms = []) {
+  const seen = new Set();
+  return [...currentTerms, ...newTerms].filter((term) => {
+    const normalized = normalizeText(term);
+    if (!normalized || seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
 }
 
 function hasGenericRelevantTag(tags) {
@@ -348,16 +438,29 @@ function getLimit(params) {
   return Math.min(Math.max(Number(params.limit) || 10, 1), 50);
 }
 
-function buildKeywordControls(terms, leads, removedCount) {
+function buildKeywordControls(terms, leads, blockedLeads = []) {
+  const blocked = Array.isArray(blockedLeads) ? blockedLeads : [];
+  const profileTerms = new Set(strictAgriculturalTagTerms.map((term) => normalizeText(term)));
+  const relatedTerms = new Set(relatedTagTerms.map((term) => normalizeText(term)));
+
   return {
     terms: terms.map((term) => ({
       term,
+      type: relatedTerms.has(normalizeText(term)) ? "related" : "direct",
       active: true,
       count: leads.filter((lead) => (lead.matchedTerms || []).some((matched) => normalizeText(matched) === normalizeText(term))).length
-    })),
-    removedCount: Math.max(removedCount, 0),
-    rawCount: leads.length + Math.max(removedCount, 0),
-    relevantCount: leads.length
+    })).concat([...blockedCategoriesForAgriSearch].map((term) => ({
+      term,
+      type: "blocked",
+      active: false,
+      count: blocked.filter((lead) => normalizeText(Object.values(lead.osmTags || {}).join(" ")).includes(normalizeText(term))).length
+    }))),
+    removedCount: blocked.length,
+    rawCount: leads.length + blocked.length,
+    relevantCount: leads.filter((lead) => lead.relevance === "high").length,
+    relatedCount: leads.filter((lead) => lead.relevance === "related").length,
+    unfilteredCount: leads.filter((lead) => lead.relevance === "unmatched").length,
+    directTerms: profileTerms.size
   };
 }
 

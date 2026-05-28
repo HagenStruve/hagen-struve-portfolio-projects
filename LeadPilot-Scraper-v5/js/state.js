@@ -19,6 +19,7 @@ const defaultFilters = {
   websiteOnly: false,
   emailOnly: false,
   minScore: 0,
+  relevanceMode: "direct-related",
   sortByScore: true
 };
 
@@ -77,6 +78,7 @@ export function getFilteredLeads(state) {
     if (filters.websiteOnly && !lead.website) return false;
     if (filters.emailOnly && !lead.email) return false;
     if ((lead.score || 0) < minScore) return false;
+    if (!matchesRelevanceMode(lead, filters.relevanceMode)) return false;
     if (activeKeywordTerms && !hasActiveKeywordMatch(lead, activeKeywordTerms)) return false;
     return true;
   });
@@ -120,6 +122,7 @@ function normalizeKeywordControls(keywordControls) {
 
 function getActiveKeywordTerms(state) {
   if ((state.searchParams?.sourceMode || "osm") !== "osm") return null;
+  if ((state.filters?.relevanceMode || "direct-related") === "all-unblocked") return null;
 
   const terms = normalizeKeywordControls(state.keywordControls).terms;
   if (!terms.length) return null;
@@ -130,4 +133,19 @@ function getActiveKeywordTerms(state) {
 function hasActiveKeywordMatch(lead, activeTerms) {
   const matchedTerms = Array.isArray(lead.matchedTerms) ? lead.matchedTerms : [];
   return matchedTerms.some((term) => activeTerms.has(normalizeText(term)));
+}
+
+function matchesRelevanceMode(lead, relevanceMode = "direct-related") {
+  if ((lead.source || "") !== "OpenStreetMap") return true;
+  if (lead.relevance === "blocked") return false;
+
+  if (relevanceMode === "direct-only") {
+    return lead.relevance === "high";
+  }
+
+  if (relevanceMode === "all-unblocked") {
+    return true;
+  }
+
+  return lead.relevance === "high" || lead.relevance === "related";
 }

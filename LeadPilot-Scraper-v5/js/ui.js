@@ -40,6 +40,7 @@ const elements = {
     websiteOnly: document.querySelector("#websiteFilter"),
     emailOnly: document.querySelector("#emailFilter"),
     minScore: document.querySelector("#minScoreFilter"),
+    relevanceMode: document.querySelector("#relevanceFilter"),
     sortByScore: document.querySelector("#sortScoreFilter")
   }
 };
@@ -68,6 +69,7 @@ export function bindUi(handlers) {
   const syncFilters = () => callbacks.onFiltersChange(getFilters());
   Object.values(elements.filters).forEach((field) => field.addEventListener("input", syncFilters));
   elements.filters.category.addEventListener("change", syncFilters);
+  elements.filters.relevanceMode.addEventListener("change", syncFilters);
   elements.filters.websiteOnly.addEventListener("change", syncFilters);
   elements.filters.emailOnly.addEventListener("change", syncFilters);
   elements.filters.sortByScore.addEventListener("change", syncFilters);
@@ -145,6 +147,7 @@ function setFilterValues(filters) {
   elements.filters.websiteOnly.checked = Boolean(filters.websiteOnly);
   elements.filters.emailOnly.checked = Boolean(filters.emailOnly);
   elements.filters.minScore.value = filters.minScore ?? 0;
+  elements.filters.relevanceMode.value = filters.relevanceMode || "direct-related";
   elements.filters.sortByScore.checked = Boolean(filters.sortByScore);
 }
 
@@ -156,6 +159,7 @@ function getFilters() {
     websiteOnly: elements.filters.websiteOnly.checked,
     emailOnly: elements.filters.emailOnly.checked,
     minScore: clamp(Number(elements.filters.minScore.value), 0, 100),
+    relevanceMode: elements.filters.relevanceMode.value || "direct-related",
     sortByScore: elements.filters.sortByScore.checked
   };
 }
@@ -213,6 +217,7 @@ function renderRows(leads) {
       </td>
       <td>
         <strong>${escapeHtml(lead.company)}</strong>
+        ${renderRelevanceBadge(lead)}
         <div class="subline">${renderTags(lead.tags)}</div>
       </td>
       <td>${escapeHtml(lead.category)}</td>
@@ -255,8 +260,8 @@ function renderKeywordControls(state, visibleLeads) {
 
   elements.keywordPanel.hidden = false;
   elements.keywordControls.innerHTML = terms.map((entry) => `
-    <label class="keyword-chip ${entry.active ? "active" : ""}">
-      <input type="checkbox" data-keyword-term="${escapeAttribute(entry.term)}"${entry.active ? " checked" : ""}>
+    <label class="keyword-chip ${entry.active ? "active" : ""} ${escapeAttribute(entry.type || "direct")}">
+      <input type="checkbox" data-keyword-term="${escapeAttribute(entry.term)}"${entry.active ? " checked" : ""}${entry.type === "blocked" ? " disabled" : ""}>
       <span>${escapeHtml(entry.term)}</span>
       <strong>${escapeHtml(entry.count)}</strong>
     </label>
@@ -267,14 +272,28 @@ function renderKeywordControls(state, visibleLeads) {
     `Datenquelle: ${state.searchParams.sourceMode === "osm" ? "OpenStreetMap" : "Google Places"}`,
     `Keyword: ${state.searchParams.keyword || "-"}`,
     state.searchParams.city ? `Ort: ${state.searchParams.city}` : "",
+    `Relevanz: ${getRelevanceModeLabel(state.filters.relevanceMode)}`,
     activeTerms.length ? `Aktiv: ${activeTerms.join(", ")}` : "Keine Keyword-Filter aktiv"
   ].filter(Boolean).map((item) => `<span>${escapeHtml(item)}</span>`).join("");
 
-  elements.keywordSummary.textContent = `${visibleLeads.length} Leads sichtbar. ${keywordControls.removedCount || 0} irrelevante OSM-Treffer wurden entfernt. ${keywordControls.rawCount || 0} Roh-Treffer geprüft.`;
+  elements.keywordSummary.textContent = `${visibleLeads.length} Leads sichtbar. ${keywordControls.relevantCount || 0} direkt passend, ${keywordControls.relatedCount || 0} verwandt, ${keywordControls.removedCount || 0} blockiert. ${keywordControls.rawCount || 0} Roh-Treffer geprüft.`;
 }
 
 function renderTags(tags = []) {
   return tags.slice(0, 4).map((tag) => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join("");
+}
+
+function renderRelevanceBadge(lead) {
+  if ((lead.source || "") !== "OpenStreetMap") return "";
+  const relevance = lead.relevance || "high";
+  const label = relevance === "related" ? "Prüfen" : relevance === "unmatched" ? "Unsicher" : "Direkt";
+  return `<span class="relevance-badge ${escapeAttribute(relevance)}">${escapeHtml(label)}</span>`;
+}
+
+function getRelevanceModeLabel(mode = "direct-related") {
+  if (mode === "direct-only") return "Nur direkt";
+  if (mode === "all-unblocked") return "Alle außer blockiert";
+  return "Direkt + verwandt";
 }
 
 function renderRating(lead) {

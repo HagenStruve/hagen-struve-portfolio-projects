@@ -51,11 +51,27 @@ export function scoreLead(lead, keyword = "") {
     reasons.push("E-Mail fehlt");
   }
 
+  if (lead.relevance === "high") {
+    score = Math.max(score + 35, 75);
+    reasons.push("Direkter OSM-Branchenmatch");
+  }
+
+  if (lead.relevance === "related") {
+    score = Math.max(score, 40);
+    score = Math.min(score, 60);
+    reasons.push("Verwandter OSM-Treffer: manuell prüfen");
+  }
+
+  if (lead.relevance === "unmatched") {
+    score = Math.min(score, 45);
+    reasons.push("Unsicherer OSM-Treffer");
+  }
+
   score = Math.max(0, Math.min(100, score));
 
   return {
     score,
-    priority: getPriority(score),
+    priority: lead.relevance === "high" ? "high" : lead.relevance === "related" ? "related" : getPriority(score),
     scoreReasons: reasons
   };
 }

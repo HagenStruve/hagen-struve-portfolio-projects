@@ -525,6 +525,20 @@ button:hover {
   background: rgba(96, 245, 189, 0.11);
 }
 
+.keyword-chip.related.active {
+  color: #ffe7a3;
+  border-color: rgba(255, 209, 102, 0.38);
+  background: rgba(255, 209, 102, 0.1);
+}
+
+.keyword-chip.blocked {
+  color: #ffc0cf;
+  border-color: rgba(255, 124, 157, 0.24);
+  background: rgba(255, 124, 157, 0.08);
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .keyword-chip input {
   width: 16px;
   min-height: auto;
@@ -646,6 +660,12 @@ td a {
   border-color: rgba(255, 209, 102, 0.34);
 }
 
+.score-badge.related {
+  color: #ffe7a3;
+  background: rgba(255, 209, 102, 0.12);
+  border-color: rgba(255, 209, 102, 0.34);
+}
+
 .score-badge.low {
   color: #ffc0cf;
   background: rgba(255, 124, 157, 0.12);
@@ -660,6 +680,33 @@ td a {
   border-radius: 999px;
   color: var(--soft);
   font-size: 11px;
+}
+
+.relevance-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.relevance-badge.high {
+  color: #baffe8;
+  background: rgba(96, 245, 189, 0.13);
+}
+
+.relevance-badge.related {
+  color: #ffe7a3;
+  background: rgba(255, 209, 102, 0.13);
+}
+
+.relevance-badge.unmatched {
+  color: #c7f5ff;
+  background: rgba(98, 183, 255, 0.12);
 }
 
 .status-select {
