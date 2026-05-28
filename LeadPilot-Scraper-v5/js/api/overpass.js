@@ -1,10 +1,90 @@
-import { createId } from "../utils/helpers.js";
+import { createId, normalizeText } from "../utils/helpers.js";
 
 const overpassUrl = "https://overpass-api.de/api/interpreter";
 const overpassTimeoutSeconds = 20;
+const blockedCategoriesForAgriSearch = new Set([
+  "pharmacy",
+  "restaurant",
+  "cafe",
+  "school",
+  "kindergarten",
+  "supermarket",
+  "bakery",
+  "hairdresser",
+  "dentist",
+  "doctor",
+  "fast_food",
+  "bank",
+  "clothes",
+  "hotel",
+  "tourism",
+  "leisure"
+]);
+
+const branchProfiles = [
+  {
+    triggers: ["landtechnik", "agrartechnik", "landmaschinen"],
+    terms: [
+      "landtechnik",
+      "landmaschinen",
+      "agrartechnik",
+      "landmaschinenhandel",
+      "maschinenhandel",
+      "maschinenbau",
+      "werkstatt",
+      "traktoren",
+      "trecker",
+      "landwirtschaft",
+      "lohnunternehmen",
+      "agrar",
+      "motorgeräte",
+      "hoftechnik"
+    ]
+  },
+  {
+    triggers: ["lohnunternehmen"],
+    terms: [
+      "lohnunternehmen",
+      "agrarservice",
+      "landwirtschaftlicher dienstleister",
+      "maschinenring",
+      "häckseln",
+      "gülle",
+      "silage",
+      "ernte"
+    ]
+  },
+  {
+    triggers: ["werkstatt"],
+    terms: [
+      "werkstatt",
+      "reparatur",
+      "landmaschinenwerkstatt",
+      "motorgeräte",
+      "service",
+      "technik"
+    ]
+  }
+];
+
+const relevantTagValues = [
+  ["shop", "trade"],
+  ["shop", "hardware"],
+  ["shop", "agrarian"],
+  ["craft", "agricultural_engines"],
+  ["craft", "mechanic"],
+  ["craft", "metal_construction"],
+  ["craft", "electronics_repair"],
+  ["office", "company"],
+  ["industrial", "factory"],
+  ["industrial", "machinery"],
+  ["landuse", "farmyard"]
+];
 
 export async function searchOverpassLeads(params) {
   const query = buildOverpassQuery(params);
+  const terms = getSearchTerms(params.keyword);
+  const isStrictSearch = isAgriculturalTechnicalSearch(params.keyword);
 
   try {
     const response = await fetch(overpassUrl, {
@@ -22,21 +102,21 @@ export async function searchOverpassLeads(params) {
     const payload = await response.json();
     const elements = Array.isArray(payload.elements) ? payload.elements : [];
     const leads = elements
-      .map((element) => mapOsmElementToLead(element, params))
-      .filter(Boolean)
+      .map((element) => mapOsmElementToLead(element, params, terms))
+      .filter((lead) => lead && isRelevantOsmLead(lead, terms, isStrictSearch))
       .slice(0, getLimit(params));
 
     if (!leads.length) {
       return {
         leads: [],
-        message: "OpenStreetMap hat keine passenden öffentlichen Unternehmensdaten gefunden.",
+        message: "OSM-Daten liefern für diese Branche evtl. wenige Treffer. Versuche Synonyme wie Landmaschinen, Agrartechnik, Werkstatt oder nutze Google Places.",
         usedApi: true
       };
     }
 
     return {
       leads,
-      message: `${leads.length} OpenStreetMap-Leads geladen. Kostenlose OSM-Daten. Telefonnummern/Websites können fehlen.`,
+      message: `${leads.length} relevante OpenStreetMap-Leads geladen. Kostenlose OSM-Daten. Telefonnummern/Websites können fehlen.`,
       usedApi: true
     };
   } catch (error) {
@@ -51,26 +131,29 @@ export async function searchOverpassLeads(params) {
 
 export function buildOverpassQuery(params) {
   const areaName = escapeOverpassValue(params.city || params.region || params.state || "Deutschland");
-  const keyword = escapeOverpassRegex(params.keyword || "");
-  const limit = getLimit(params);
-  const keywordFilter = keyword ? `["name"~"${keyword}",i]` : "";
+  const terms = getSearchTerms(params.keyword);
+  const regex = terms.map((term) => escapeOverpassRegex(term)).join("|");
+  const limit = Math.max(getLimit(params) * 5, 25);
 
   return `
 [out:json][timeout:${overpassTimeoutSeconds}];
 area["name"="${areaName}"]["boundary"="administrative"]->.searchArea;
 (
-  nwr${keywordFilter}(area.searchArea);
-  nwr["shop"](area.searchArea);
-  nwr["craft"](area.searchArea);
-  nwr["office"](area.searchArea);
-  nwr["industrial"](area.searchArea);
-  nwr["amenity"](area.searchArea);
+  nwr["name"~"${regex}",i](area.searchArea);
+  nwr["brand"~"${regex}",i](area.searchArea);
+  nwr["operator"~"${regex}",i](area.searchArea);
+  nwr["description"~"${regex}",i](area.searchArea);
+  nwr["shop"~"^(trade|hardware|agrarian)$",i](area.searchArea);
+  nwr["craft"~"^(agricultural_engines|mechanic|metal_construction|electronics_repair)$",i](area.searchArea);
+  nwr["industrial"~"^(factory|machinery)$",i](area.searchArea);
+  nwr["office"="company"]["name"~"${regex}",i](area.searchArea);
+  nwr["landuse"="farmyard"]["name"~"${regex}",i](area.searchArea);
 );
-out center tags ${limit};
+out tags center ${limit};
 `;
 }
 
-export function mapOsmElementToLead(element, params = {}) {
+export function mapOsmElementToLead(element, params = {}, terms = getSearchTerms(params.keyword)) {
   const tags = element.tags || {};
   const company = tags.name || tags.operator || tags.brand;
 
@@ -85,6 +168,7 @@ export function mapOsmElementToLead(element, params = {}) {
   const phone = tags.phone || tags["contact:phone"] || "";
   const website = tags.website || tags["contact:website"] || "";
   const email = tags.email || tags["contact:email"] || "";
+  const matchedTerms = getMatchedTerms(tags, company, category, terms);
 
   return {
     id: createId("osm"),
@@ -103,15 +187,89 @@ export function mapOsmElementToLead(element, params = {}) {
     googleMapsUri: "",
     osmType: element.type,
     osmId: element.id,
+    osmTags: tags,
+    matchedTerms,
     source: "OpenStreetMap",
     status: "Neu",
     tags: [params.keyword, category, city, "OpenStreetMap"].filter(Boolean),
-    notes: `OSM/Overpass Treffer. Öffentliche Daten können unvollständig sein. ${mapsLink ? "OSM-Karte vorhanden." : ""}`.trim()
+    notes: `OSM/Overpass Treffer. Öffentliche Daten können unvollständig sein. ${matchedTerms.length ? `Match: ${matchedTerms.join(", ")}.` : ""} ${mapsLink ? "OSM-Karte vorhanden." : ""}`.trim()
   };
 }
 
+export function isRelevantOsmLead(lead, terms = [], strict = true) {
+  const tags = lead.osmTags || {};
+
+  if (strict && hasBlockedCategory(tags)) {
+    lead.filteredReason = "blocked-category";
+    return false;
+  }
+
+  if (lead.matchedTerms?.length) return true;
+
+  if (hasRelevantTag(tags)) return true;
+
+  const searchable = normalizeText([
+    lead.company,
+    lead.category,
+    tags.description,
+    tags["contact:website"],
+    tags.website
+  ].join(" "));
+
+  const termHit = terms.some((term) => searchable.includes(normalizeText(term)));
+  if (!termHit) lead.filteredReason = "no-keyword-or-profile-match";
+  return termHit;
+}
+
+export function getSearchTerms(keyword = "") {
+  const normalized = normalizeText(keyword);
+  const terms = new Set([keyword].filter(Boolean));
+
+  branchProfiles.forEach((profile) => {
+    if (profile.triggers.some((trigger) => normalized.includes(trigger))) {
+      profile.terms.forEach((term) => terms.add(term));
+    }
+  });
+
+  return [...terms].filter(Boolean);
+}
+
+function isAgriculturalTechnicalSearch(keyword = "") {
+  const normalized = normalizeText(keyword);
+  return ["landtechnik", "lohnunternehmen", "agrartechnik", "werkstatt"].some((term) => normalized.includes(term));
+}
+
+function hasBlockedCategory(tags) {
+  return ["amenity", "shop", "craft", "tourism", "leisure", "office"].some((key) => {
+    const value = normalizeText(tags[key]);
+    return blockedCategoriesForAgriSearch.has(value);
+  });
+}
+
+function hasRelevantTag(tags) {
+  return relevantTagValues.some(([key, value]) => normalizeText(tags[key]) === value);
+}
+
+function getMatchedTerms(tags, company, category, terms) {
+  const searchable = normalizeText([
+    company,
+    category,
+    tags.description,
+    tags.shop,
+    tags.craft,
+    tags.office,
+    tags.industrial,
+    tags.operator,
+    tags.brand,
+    tags.website,
+    tags["contact:website"]
+  ].join(" "));
+
+  return terms.filter((term) => searchable.includes(normalizeText(term)));
+}
+
 function getOsmCategory(tags, fallback = "Unternehmen") {
-  return tags.shop || tags.craft || tags.office || tags.industrial || tags.amenity || tags.name || fallback;
+  return tags.shop || tags.craft || tags.office || tags.industrial || tags.amenity || tags.landuse || tags.name || fallback;
 }
 
 function buildAddress(tags) {
