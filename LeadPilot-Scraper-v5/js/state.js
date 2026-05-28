@@ -24,6 +24,8 @@ const defaultFilters = {
 };
 
 const defaultKeywordControls = {
+  profileId: "default",
+  profileLabel: "Allgemeines Profil",
   terms: [],
   removedCount: 0,
   rawCount: 0,
@@ -114,6 +116,7 @@ function normalizeKeywordControls(keywordControls) {
     ...(keywordControls || {}),
     terms: terms.map((entry) => ({
       term: String(entry.term || ""),
+      type: entry.type || "direct",
       active: entry.active !== false,
       count: Number(entry.count) || 0
     })).filter((entry) => entry.term)

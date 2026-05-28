@@ -270,6 +270,7 @@ function renderKeywordControls(state, visibleLeads) {
   const activeTerms = terms.filter((entry) => entry.active).map((entry) => entry.term);
   elements.activeFilterSummary.innerHTML = [
     `Datenquelle: ${state.searchParams.sourceMode === "osm" ? "OpenStreetMap" : "Google Places"}`,
+    `Profil: ${keywordControls.profileLabel || "Allgemeines Profil"}`,
     `Keyword: ${state.searchParams.keyword || "-"}`,
     state.searchParams.city ? `Ort: ${state.searchParams.city}` : "",
     `Relevanz: ${getRelevanceModeLabel(state.filters.relevanceMode)}`,

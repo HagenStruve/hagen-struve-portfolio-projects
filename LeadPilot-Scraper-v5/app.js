@@ -16,6 +16,7 @@ bindUi({
   state,
   onParamsChange: (params) => {
     state.searchParams = params;
+    state.keywordControls = { profileId: "default", profileLabel: "Allgemeines Profil", terms: [], removedCount: 0, rawCount: 0, relevantCount: 0 };
     saveAndRender();
   },
   onFiltersChange: (filters) => {

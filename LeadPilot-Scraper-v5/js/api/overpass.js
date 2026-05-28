@@ -3,39 +3,16 @@ import { createId, normalizeText } from "../utils/helpers.js";
 const overpassUrl = "https://overpass-api.de/api/interpreter";
 const overpassTimeoutSeconds = 20;
 
-const blockedCategoriesForAgriSearch = new Set([
-  "bicycle",
-  "mobile_phone",
-  "restaurant",
-  "pharmacy",
-  "school",
-  "kindergarten",
-  "pet",
-  "supermarket",
-  "cafe",
-  "bakery",
-  "hairdresser",
-  "dentist",
-  "doctor",
-  "fast_food",
-  "bank",
-  "hotel",
-  "tourism",
-  "leisure",
-  "clothes",
-  "electronics"
-]);
-
-const branchProfiles = [
-  {
-    id: "landtechnik",
-    strictAgriculture: true,
-    triggers: ["landtechnik", "landmaschinen", "agrartechnik"],
-    terms: [
+const INDUSTRY_PROFILES = {
+  landtechnik: {
+    label: "Landtechnik",
+    triggers: ["landtechnik", "landmaschinen", "agrartechnik", "traktor", "trecker", "lohnunternehmen", "agrarservice"],
+    direct: [
       "landtechnik",
       "landmaschinen",
       "agrartechnik",
       "agrar",
+      "agrarservice",
       "traktoren",
       "tractor",
       "trecker",
@@ -47,11 +24,10 @@ const branchProfiles = [
       "erntetechnik",
       "melktechnik",
       "lohnunternehmen",
-      "agrarservice",
       "agricultural_machinery",
       "farm_equipment"
     ],
-    relatedTerms: [
+    related: [
       "maschinenbau",
       "metallbau",
       "werkstatt",
@@ -64,95 +40,100 @@ const branchProfiles = [
       "construction",
       "engineering",
       "metal_construction"
-    ]
+    ],
+    blocked: ["pharmacy", "restaurant", "cafe", "school", "kindergarten", "supermarket", "bakery", "hairdresser", "dentist", "doctor", "fast_food", "bank", "clothes", "hotel", "tourism", "leisure", "mobile_phone", "bicycle", "pet"]
   },
-  {
-    id: "lohnunternehmen",
-    strictAgriculture: true,
-    triggers: ["lohnunternehmen", "agrarservice"],
-    terms: [
-      "lohnunternehmen",
-      "agrarservice",
-      "landwirtschaftlicher dienstleister",
-      "maschinenring",
-      "haeckseln",
-      "häckseln",
-      "guelle",
-      "gülle",
-      "silage",
-      "ernte"
-    ]
+  kosmetik: {
+    label: "Kosmetik / Nagelstudio",
+    triggers: ["nagellack", "nagelstudio", "kosmetik", "kosmetiker", "beauty"],
+    direct: ["nagelstudio", "nagellack", "nails", "nail", "manicure", "maniküre", "kosmetik", "kosmetikstudio", "beauty"],
+    related: ["spa", "wellness", "salon", "beauty_salon", "pedicure", "pediküre", "massage", "makeup", "skin_care", "friseur", "hairdresser"],
+    blocked: ["pharmacy", "restaurant", "school", "kindergarten", "supermarket", "bakery", "dentist", "doctor", "fast_food", "bank", "hotel", "tourism", "bicycle", "mobile_phone", "car_repair"]
   },
-  {
-    id: "werkstatt",
-    strictAgriculture: false,
-    triggers: ["werkstatt"],
-    terms: [
-      "werkstatt",
-      "reparatur",
-      "landmaschinenwerkstatt",
-      "motorgeraete",
-      "motorgeräte",
-      "service",
-      "technik"
-    ]
+  friseur: {
+    label: "Friseur",
+    triggers: ["friseur", "friseursalon", "hairdresser", "barber"],
+    direct: ["friseur", "friseursalon", "hairdresser", "barber", "haarsalon", "salon", "hair"],
+    related: ["beauty", "kosmetik", "wellness", "styling", "makeup"],
+    blocked: ["pharmacy", "restaurant", "school", "kindergarten", "supermarket", "bakery", "dentist", "doctor", "fast_food", "bank", "hotel", "tourism", "bicycle", "mobile_phone", "car_repair"]
+  },
+  gastronomie: {
+    label: "Gastronomie",
+    triggers: ["restaurant", "gastronomie", "cafe", "bar", "imbiss", "bistro", "hotel"],
+    direct: ["restaurant", "gastronomie", "cafe", "bar", "pub", "bistro", "fast_food", "imbiss", "hotel", "biergarten", "catering"],
+    related: ["bakery", "konditorei", "food", "takeaway", "kitchen", "eventlocation"],
+    blocked: ["pharmacy", "school", "kindergarten", "dentist", "doctor", "bank", "bicycle", "mobile_phone", "car_repair"]
+  },
+  handwerk: {
+    label: "Handwerk",
+    triggers: ["handwerk", "maler", "sanitär", "sanitaer", "elektriker", "installateur", "tischler", "zimmerei", "bau"],
+    direct: ["handwerk", "craft", "maler", "painter", "sanitär", "sanitaer", "plumber", "elektriker", "electrician", "installateur", "tischler", "carpenter", "zimmerei", "construction"],
+    related: ["bauunternehmen", "contractor", "building", "renovierung", "repair", "maintenance", "hardware", "trade"],
+    blocked: ["pharmacy", "restaurant", "cafe", "school", "kindergarten", "supermarket", "bakery", "hairdresser", "dentist", "doctor", "fast_food", "bank", "hotel", "tourism", "bicycle", "mobile_phone"]
+  },
+  dachdecker: {
+    label: "Handwerk / Dachdecker",
+    triggers: ["dachdecker", "roofing", "roofer"],
+    direct: ["dachdecker", "roofing", "roofer", "dachbau", "bedachung", "dachsanierung"],
+    related: ["zimmerei", "carpenter", "construction", "bauunternehmen", "spengler", "klempner", "solar", "photovoltaik"],
+    blocked: ["pharmacy", "restaurant", "cafe", "school", "kindergarten", "supermarket", "bakery", "hairdresser", "dentist", "doctor", "fast_food", "bank", "hotel", "tourism", "bicycle", "mobile_phone"]
+  },
+  solar: {
+    label: "Solar / Photovoltaik",
+    triggers: ["solar", "photovoltaik", "pv", "solarteur", "energie"],
+    direct: ["solar", "photovoltaik", "photovoltaic", "pv", "solarteur", "solar_energy", "solaranlage", "energieberatung", "renewable"],
+    related: ["elektriker", "electrician", "energy", "roofing", "dachdecker", "engineering", "installation", "building_services"],
+    blocked: ["pharmacy", "restaurant", "cafe", "school", "kindergarten", "supermarket", "bakery", "hairdresser", "dentist", "doctor", "fast_food", "bank", "hotel", "tourism", "bicycle", "mobile_phone"]
+  },
+  immobilien: {
+    label: "Immobilien",
+    triggers: ["immobilien", "makler", "hausverwaltung", "real estate", "property"],
+    direct: ["immobilien", "makler", "immobilienmakler", "real_estate", "real estate", "estate_agent", "property", "hausverwaltung", "property_management"],
+    related: ["versicherung", "finance", "bank", "notar", "construction", "building", "architecture"],
+    blocked: ["pharmacy", "restaurant", "cafe", "school", "kindergarten", "supermarket", "bakery", "hairdresser", "dentist", "doctor", "fast_food", "hotel", "tourism", "bicycle", "mobile_phone"]
+  },
+  werkstatt: {
+    label: "Werkstatt / KFZ",
+    triggers: ["werkstatt", "kfz", "autohaus", "autoreparatur", "reifen", "mechanic"],
+    direct: ["werkstatt", "kfz", "autohaus", "autoreparatur", "car_repair", "mechanic", "garage", "reifen", "tyres", "autoservice"],
+    related: ["motor", "service", "maintenance", "repair", "trade", "parts", "spare_parts"],
+    blocked: ["pharmacy", "restaurant", "cafe", "school", "kindergarten", "supermarket", "bakery", "hairdresser", "dentist", "doctor", "fast_food", "bank", "hotel", "tourism", "bicycle", "mobile_phone"]
   }
-];
+};
 
-const broadTermsThatNeedAgriculture = new Set([
-  "werkstatt",
-  "metal_construction",
-  "bicycle",
-  "mobile_phone",
-  "hardware",
-  "trade",
-  "mechanic",
-  "company"
-]);
+const fallbackSynonyms = {
+  "bäckerei": ["bäckerei", "baeckerei", "bakery", "konditorei", "backshop"],
+  "baeckerei": ["baeckerei", "bäckerei", "bakery", "konditorei", "backshop"],
+  "friseur": ["friseur", "friseursalon", "hairdresser", "barber", "salon"],
+  "dachdecker": INDUSTRY_PROFILES.handwerk.direct,
+  "solar": INDUSTRY_PROFILES.solar.direct,
+  "immobilien": INDUSTRY_PROFILES.immobilien.direct
+};
 
-const strictAgriculturalTagTerms = [
-  "agricultural",
-  "farm",
-  "agrarian",
-  "tractor",
-  "machinery",
-  "agricultural_machinery",
-  "farm_equipment"
-];
-
-const relatedTagTerms = [
-  "maschinenbau",
-  "metallbau",
-  "werkstatt",
-  "mechanic",
-  "motorgeraete",
-  "motorgeräte",
-  "handel",
-  "trade",
-  "hardware",
-  "construction",
-  "engineering",
-  "metal_construction"
-];
-
-const genericRelevantTagValues = [
+const genericTagValues = [
   ["shop", "trade"],
   ["shop", "hardware"],
+  ["shop", "beauty"],
+  ["shop", "hairdresser"],
   ["shop", "agrarian"],
-  ["craft", "agricultural_engines"],
   ["craft", "mechanic"],
   ["craft", "metal_construction"],
-  ["craft", "electronics_repair"],
+  ["craft", "electrician"],
+  ["craft", "roofer"],
+  ["craft", "painter"],
   ["office", "company"],
+  ["office", "estate_agent"],
   ["industrial", "factory"],
   ["industrial", "machinery"],
+  ["amenity", "restaurant"],
+  ["amenity", "cafe"],
   ["landuse", "farmyard"]
 ];
 
 export async function searchOverpassLeads(params) {
-  const query = buildOverpassQuery(params);
-  const terms = getSearchTerms(params.keyword);
   const profile = getSearchProfile(params.keyword);
+  const terms = getSearchTerms(params.keyword);
+  const query = buildOverpassQuery(params);
 
   try {
     const response = await fetch(overpassUrl, {
@@ -179,31 +160,31 @@ export async function searchOverpassLeads(params) {
       .slice(0, getLimit(params));
     const highCount = leads.filter((lead) => lead.relevance === "high").length;
     const relatedCount = leads.filter((lead) => lead.relevance === "related").length;
-    const keywordControls = buildKeywordControls(terms, leads, blockedLeads);
+    const keywordControls = buildKeywordControls(profile, terms, leads, blockedLeads);
 
     if (!leads.length) {
       return {
         leads: [],
         keywordControls,
-        message: "Keine passenden OSM-Treffer gefunden. OSM-Daten sind je nach Branche unvollständig. Versuche andere Begriffe wie Landmaschinen, Agrartechnik, Agrarservice oder nutze Google Places.",
+        message: "Keine passenden OSM-Treffer gefunden. OSM ist je nach Branche unvollständig. Versuche andere Begriffe oder nutze Google Places.",
         usedApi: true
       };
     }
 
     const relevanceMessage = highCount
       ? `${highCount} direkte Treffer und ${relatedCount} verwandte Betriebe geladen.`
-      : "Keine direkten Landtechnik-Treffer gefunden. Es werden verwandte Betriebe angezeigt, die du prüfen kannst.";
+      : `Keine direkten ${profile.label}-Treffer gefunden. Es werden verwandte Betriebe angezeigt, die du prüfen kannst.`;
 
     return {
       leads,
       keywordControls,
-      message: `${relevanceMessage} ${keywordControls.removedCount} blockierte OSM-Treffer entfernt. Kostenlose OSM-Daten. Telefonnummern/Websites können fehlen.`,
+      message: `${relevanceMessage} ${keywordControls.removedCount} blockierte OSM-Treffer entfernt. Aktives Profil: ${profile.label}.`,
       usedApi: true
     };
   } catch (error) {
     return {
       leads: [],
-      keywordControls: buildKeywordControls(terms, [], 0),
+      keywordControls: buildKeywordControls(profile, terms, [], []),
       message: `OpenStreetMap/Overpass konnte nicht laden: ${error.message || "Netzwerk- oder API-Fehler"}. Bitte später erneut versuchen oder Suchparameter anpassen.`,
       usedApi: true,
       error
@@ -214,8 +195,8 @@ export async function searchOverpassLeads(params) {
 export function buildOverpassQuery(params) {
   const areaName = escapeOverpassValue(params.city || params.region || params.state || "Deutschland");
   const terms = getSearchTerms(params.keyword);
-  const regex = terms.map((term) => escapeOverpassRegex(term)).join("|");
-  const limit = Math.max(getLimit(params) * 5, 25);
+  const regex = terms.map((term) => escapeOverpassRegex(term)).join("|") || escapeOverpassRegex(params.keyword || "Firma");
+  const limit = Math.max(getLimit(params) * 6, 30);
 
   return `
 [out:json][timeout:${overpassTimeoutSeconds}];
@@ -225,11 +206,11 @@ area["name"="${areaName}"]["boundary"="administrative"]->.searchArea;
   nwr["brand"~"${regex}",i](area.searchArea);
   nwr["operator"~"${regex}",i](area.searchArea);
   nwr["description"~"${regex}",i](area.searchArea);
-  nwr["shop"~"^(agrarian|trade|hardware)$",i](area.searchArea);
-  nwr["craft"~"^(agricultural_engines|mechanic|metal_construction)$",i](area.searchArea);
-  nwr["industrial"~"^(machinery|factory)$",i](area.searchArea);
-  nwr["office"="company"]["name"~"${regex}",i](area.searchArea);
-  nwr["landuse"="farmyard"]["name"~"${regex}",i](area.searchArea);
+  nwr["shop"~"${regex}",i](area.searchArea);
+  nwr["craft"~"${regex}",i](area.searchArea);
+  nwr["office"~"${regex}",i](area.searchArea);
+  nwr["amenity"~"${regex}",i](area.searchArea);
+  nwr["industrial"~"${regex}",i](area.searchArea);
 );
 out tags center ${limit};
 `;
@@ -285,80 +266,79 @@ export function isRelevantOsmLead(lead, terms = [], profile = getSearchProfile("
 
 export function classifyOsmLead(lead, terms = [], profile = getSearchProfile("")) {
   const tags = lead.osmTags || {};
-  const strictAgriculture = Boolean(profile.strictAgriculture);
+  const blockedMatches = findTermMatches(tags, lead, profile.blocked);
 
-  if (strictAgriculture && hasBlockedCategory(tags)) {
+  if (blockedMatches.length) {
+    lead.matchedTerms = mergeTerms(lead.matchedTerms, blockedMatches);
     return withRelevance(lead, "blocked", "blocked-category");
   }
 
-  if (strictAgriculture) {
-    const strictMatches = (lead.matchedTerms || []).filter((term) => !isRelatedOnlyTerm(term));
-    const agriculturalTagMatches = getStrongAgriculturalMatches(tags);
-    if (strictMatches.length || agriculturalTagMatches.length) {
-      lead.matchedTerms = mergeTerms(lead.matchedTerms, agriculturalTagMatches);
-      return withRelevance(lead, "high");
-    }
-
-    const relatedMatches = getRelatedMatches(tags, lead);
-    if (relatedMatches.length) {
-      lead.matchedTerms = mergeTerms(lead.matchedTerms, relatedMatches);
-      return withRelevance(lead, "related", "", "Prüfen");
-    }
-
-    return withRelevance(lead, "unmatched", "no-direct-or-related-match", "Prüfen");
+  const directMatches = findTermMatches(tags, lead, profile.direct);
+  if (directMatches.length) {
+    lead.matchedTerms = mergeTerms(lead.matchedTerms, directMatches);
+    return withRelevance(lead, "high");
   }
 
-  if (lead.matchedTerms?.length) return withRelevance(lead, "high");
-  if (hasGenericRelevantTag(tags)) return withRelevance(lead, "related", "", "Prüfen");
+  const relatedMatches = findTermMatches(tags, lead, profile.related);
+  if (relatedMatches.length) {
+    lead.matchedTerms = mergeTerms(lead.matchedTerms, relatedMatches);
+    return withRelevance(lead, "related", "", "Prüfen");
+  }
 
-  const searchable = normalizeText([
-    lead.company,
-    lead.category,
-    tags.description,
-    tags["contact:website"],
-    tags.website
-  ].join(" "));
-  const termHit = terms.some((term) => searchable.includes(normalizeText(term)));
+  if (profile.id === "default" && lead.matchedTerms?.length) {
+    return withRelevance(lead, "high");
+  }
 
-  return termHit
-    ? withRelevance(lead, "high")
-    : withRelevance(lead, "unmatched", "no-keyword-or-profile-match", "Prüfen");
+  if (profile.id === "default" && hasGenericRelevantTag(tags)) {
+    return withRelevance(lead, "related", "", "Prüfen");
+  }
+
+  return withRelevance(lead, "unmatched", "no-profile-match", "Prüfen");
 }
 
 export function getSearchTerms(keyword = "") {
   const profile = getSearchProfile(keyword);
   const rawTerms = profile.id === "default"
-    ? [keyword]
-    : [...profile.terms, ...(profile.relatedTerms || []), keyword];
-  const seen = new Set();
+    ? buildFallbackDirectTerms(keyword)
+    : [...profile.direct, ...profile.related, keyword];
 
-  return rawTerms.filter((term) => {
-    const normalizedTerm = normalizeText(term);
-    if (!normalizedTerm || seen.has(normalizedTerm)) return false;
-    seen.add(normalizedTerm);
-    return true;
-  });
+  return uniqueTerms(rawTerms);
 }
 
 export function getSearchProfile(keyword = "") {
   const normalized = normalizeText(keyword);
-  return branchProfiles.find((profile) => profile.triggers.some((trigger) => normalized.includes(normalizeText(trigger))))
-    || { id: "default", strictAgriculture: false, terms: [] };
+  const match = Object.entries(INDUSTRY_PROFILES).find(([, profile]) => (
+    profile.triggers.some((trigger) => normalized.includes(normalizeText(trigger)))
+  ));
+
+  if (match) {
+    const [id, profile] = match;
+    return {
+      id,
+      label: profile.label,
+      direct: uniqueTerms(profile.direct),
+      related: uniqueTerms(profile.related),
+      blocked: uniqueTerms(profile.blocked)
+    };
+  }
+
+  return {
+    id: "default",
+    label: "Allgemeines Profil",
+    direct: buildFallbackDirectTerms(keyword),
+    related: [],
+    blocked: []
+  };
 }
 
-function hasBlockedCategory(tags) {
-  return ["amenity", "shop", "craft", "tourism", "leisure", "office"].some((key) => {
-    const value = normalizeText(tags[key]);
-    return blockedCategoriesForAgriSearch.has(value);
-  });
+function buildFallbackDirectTerms(keyword = "") {
+  const normalized = normalizeText(keyword);
+  const known = fallbackSynonyms[normalized];
+
+  return uniqueTerms(known || [keyword]);
 }
 
-function getStrongAgriculturalMatches(tags) {
-  const values = normalizeText(Object.values(tags).join(" "));
-  return strictAgriculturalTagTerms.filter((term) => values.includes(normalizeText(term)));
-}
-
-function getRelatedMatches(tags, lead) {
+function findTermMatches(tags, lead, terms = []) {
   const searchable = normalizeText([
     lead.company,
     lead.category,
@@ -366,16 +346,28 @@ function getRelatedMatches(tags, lead) {
     tags.shop,
     tags.craft,
     tags.office,
+    tags.amenity,
     tags.industrial,
+    tags.tourism,
+    tags.leisure,
     tags.operator,
-    tags.brand
+    tags.brand,
+    tags.website,
+    tags["contact:website"]
   ].join(" "));
 
-  return relatedTagTerms.filter((term) => searchable.includes(normalizeText(term)));
+  return terms.filter((term) => {
+    const normalizedTerm = normalizeText(term);
+    return normalizedTerm && searchable.includes(normalizedTerm);
+  });
 }
 
-function isRelatedOnlyTerm(term) {
-  return broadTermsThatNeedAgriculture.has(normalizeText(term)) || relatedTagTerms.some((relatedTerm) => normalizeText(relatedTerm) === normalizeText(term));
+function hasGenericRelevantTag(tags) {
+  return genericTagValues.some(([key, value]) => normalizeText(tags[key]) === normalizeText(value));
+}
+
+function getMatchedTerms(tags, company, category, terms) {
+  return findTermMatches(tags, { company, category }, terms);
 }
 
 function withRelevance(lead, relevance, filteredReason = "", status = lead.status || "Neu") {
@@ -389,8 +381,12 @@ function withRelevance(lead, relevance, filteredReason = "", status = lead.statu
 }
 
 function mergeTerms(currentTerms = [], newTerms = []) {
+  return uniqueTerms([...currentTerms, ...newTerms]);
+}
+
+function uniqueTerms(terms = []) {
   const seen = new Set();
-  return [...currentTerms, ...newTerms].filter((term) => {
+  return terms.filter((term) => {
     const normalized = normalizeText(term);
     if (!normalized || seen.has(normalized)) return false;
     seen.add(normalized);
@@ -398,33 +394,8 @@ function mergeTerms(currentTerms = [], newTerms = []) {
   });
 }
 
-function hasGenericRelevantTag(tags) {
-  return genericRelevantTagValues.some(([key, value]) => normalizeText(tags[key]) === normalizeText(value));
-}
-
-function getMatchedTerms(tags, company, category, terms) {
-  const searchable = normalizeText([
-    company,
-    category,
-    tags.description,
-    tags.shop,
-    tags.craft,
-    tags.office,
-    tags.industrial,
-    tags.operator,
-    tags.brand,
-    tags.website,
-    tags["contact:website"]
-  ].join(" "));
-
-  return terms.filter((term) => {
-    const normalizedTerm = normalizeText(term);
-    return normalizedTerm && searchable.includes(normalizedTerm);
-  });
-}
-
 function getOsmCategory(tags, fallback = "Unternehmen") {
-  return tags.shop || tags.craft || tags.office || tags.industrial || tags.amenity || tags.landuse || tags.name || fallback;
+  return tags.shop || tags.craft || tags.office || tags.industrial || tags.amenity || tags.tourism || tags.leisure || tags.landuse || tags.name || fallback;
 }
 
 function buildAddress(tags) {
@@ -438,18 +409,20 @@ function getLimit(params) {
   return Math.min(Math.max(Number(params.limit) || 10, 1), 50);
 }
 
-function buildKeywordControls(terms, leads, blockedLeads = []) {
+function buildKeywordControls(profile, terms, leads, blockedLeads = []) {
   const blocked = Array.isArray(blockedLeads) ? blockedLeads : [];
-  const profileTerms = new Set(strictAgriculturalTagTerms.map((term) => normalizeText(term)));
-  const relatedTerms = new Set(relatedTagTerms.map((term) => normalizeText(term)));
+  const directTerms = new Set(profile.direct.map((term) => normalizeText(term)));
+  const relatedTerms = new Set(profile.related.map((term) => normalizeText(term)));
 
   return {
+    profileId: profile.id,
+    profileLabel: profile.label,
     terms: terms.map((term) => ({
       term,
       type: relatedTerms.has(normalizeText(term)) ? "related" : "direct",
       active: true,
       count: leads.filter((lead) => (lead.matchedTerms || []).some((matched) => normalizeText(matched) === normalizeText(term))).length
-    })).concat([...blockedCategoriesForAgriSearch].map((term) => ({
+    })).concat(profile.blocked.map((term) => ({
       term,
       type: "blocked",
       active: false,
@@ -460,7 +433,7 @@ function buildKeywordControls(terms, leads, blockedLeads = []) {
     relevantCount: leads.filter((lead) => lead.relevance === "high").length,
     relatedCount: leads.filter((lead) => lead.relevance === "related").length,
     unfilteredCount: leads.filter((lead) => lead.relevance === "unmatched").length,
-    directTerms: profileTerms.size
+    directTerms: directTerms.size
   };
 }
 
