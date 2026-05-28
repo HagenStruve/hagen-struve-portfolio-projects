@@ -57,6 +57,7 @@ body::before {
 .workflow-card,
 .results-card,
 .toolbar-card,
+.keyword-card,
 .prompt-card,
 .api-guide-card,
 .stat-card {
@@ -96,6 +97,7 @@ body::before {
 .workspace,
 .results-card,
 .toolbar-card,
+.keyword-card,
 .prompt-card {
   position: relative;
   z-index: 1;
@@ -301,6 +303,7 @@ p {
 .workflow-card,
 .results-card,
 .toolbar-card,
+.keyword-card,
 .prompt-card {
   border-radius: 28px;
   padding: 28px;
@@ -455,6 +458,7 @@ button:hover {
 }
 
 .toolbar-card,
+.keyword-card,
 .results-card,
 .prompt-card {
   margin-top: 24px;
@@ -464,6 +468,82 @@ button:hover {
   position: sticky;
   top: 12px;
   z-index: 5;
+}
+
+.keyword-card {
+  border-radius: 28px;
+  padding: 24px 28px;
+}
+
+.keyword-help,
+.keyword-summary {
+  color: var(--muted);
+  margin: 14px 0 0;
+}
+
+.active-filter-row,
+.keyword-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.active-filter-row {
+  margin-top: 18px;
+}
+
+.active-filter-row span {
+  border: 1px solid rgba(98, 183, 255, 0.24);
+  border-radius: 999px;
+  padding: 7px 11px;
+  color: #c7f5ff;
+  background: rgba(98, 183, 255, 0.09);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.keyword-controls {
+  margin-top: 16px;
+}
+
+.keyword-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(1, 6, 6, 0.56);
+  cursor: pointer;
+}
+
+.keyword-chip.active {
+  color: #baffe8;
+  border-color: rgba(96, 245, 189, 0.42);
+  background: rgba(96, 245, 189, 0.11);
+}
+
+.keyword-chip input {
+  width: 16px;
+  min-height: auto;
+  accent-color: var(--accent);
+}
+
+.keyword-chip span,
+.keyword-chip strong {
+  font-size: 12px;
+}
+
+.keyword-chip strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .results-head {
@@ -654,6 +734,7 @@ td a {
   .workflow-card,
   .results-card,
   .toolbar-card,
+  .keyword-card,
   .prompt-card,
   .stat-card {
     border-radius: 22px;

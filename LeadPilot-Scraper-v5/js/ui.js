@@ -12,6 +12,10 @@ const elements = {
   sourceLabel: document.querySelector("#sourceLabel"),
   statusLine: document.querySelector("#statusLine"),
   apiModeStatus: document.querySelector("#apiModeStatus"),
+  keywordPanel: document.querySelector("#keywordPanel"),
+  keywordControls: document.querySelector("#keywordControls"),
+  keywordSummary: document.querySelector("#keywordSummary"),
+  activeFilterSummary: document.querySelector("#activeFilterSummary"),
   promptPanel: document.querySelector("#promptPanel"),
   promptOutput: document.querySelector("#promptOutput"),
   stats: {
@@ -81,6 +85,13 @@ export function bindUi(handlers) {
       callbacks.onLeadNotesChange(target.dataset.notes, target.value);
     }
   }, 220));
+
+  elements.keywordControls.addEventListener("change", (event) => {
+    const target = event.target;
+    if (target.matches("[data-keyword-term]")) {
+      callbacks.onKeywordToggle(target.dataset.keywordTerm, target.checked);
+    }
+  });
 }
 
 export function hydrateForm(state) {
@@ -104,6 +115,7 @@ export function renderApp(state, visibleLeads, promptText = "") {
   renderStats(state.leads);
   renderApiMode(state.searchParams);
   renderCategories(state.leads, state.filters.category);
+  renderKeywordControls(state, visibleLeads);
   renderRows(visibleLeads);
 
   elements.leadCount.textContent = String(visibleLeads.length);
@@ -226,6 +238,39 @@ function renderRows(leads) {
       </td>
     </tr>
   `).join("");
+}
+
+function renderKeywordControls(state, visibleLeads) {
+  const keywordControls = state.keywordControls || {};
+  const terms = Array.isArray(keywordControls.terms) ? keywordControls.terms : [];
+  const isOsm = (state.searchParams.sourceMode || "osm") === "osm";
+
+  if (!isOsm || !terms.length) {
+    elements.keywordPanel.hidden = true;
+    elements.keywordControls.innerHTML = "";
+    elements.keywordSummary.textContent = "";
+    elements.activeFilterSummary.innerHTML = "";
+    return;
+  }
+
+  elements.keywordPanel.hidden = false;
+  elements.keywordControls.innerHTML = terms.map((entry) => `
+    <label class="keyword-chip ${entry.active ? "active" : ""}">
+      <input type="checkbox" data-keyword-term="${escapeAttribute(entry.term)}"${entry.active ? " checked" : ""}>
+      <span>${escapeHtml(entry.term)}</span>
+      <strong>${escapeHtml(entry.count)}</strong>
+    </label>
+  `).join("");
+
+  const activeTerms = terms.filter((entry) => entry.active).map((entry) => entry.term);
+  elements.activeFilterSummary.innerHTML = [
+    `Datenquelle: ${state.searchParams.sourceMode === "osm" ? "OpenStreetMap" : "Google Places"}`,
+    `Keyword: ${state.searchParams.keyword || "-"}`,
+    state.searchParams.city ? `Ort: ${state.searchParams.city}` : "",
+    activeTerms.length ? `Aktiv: ${activeTerms.join(", ")}` : "Keine Keyword-Filter aktiv"
+  ].filter(Boolean).map((item) => `<span>${escapeHtml(item)}</span>`).join("");
+
+  elements.keywordSummary.textContent = `${visibleLeads.length} Leads sichtbar. ${keywordControls.removedCount || 0} irrelevante OSM-Treffer wurden entfernt. ${keywordControls.rawCount || 0} Roh-Treffer geprüft.`;
 }
 
 function renderTags(tags = []) {

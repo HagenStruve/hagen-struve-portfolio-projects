@@ -2,7 +2,7 @@ import { searchGooglePlaces } from "./js/api/google-places.js";
 import { searchOverpassLeads } from "./js/api/overpass.js";
 import { buildCsv, buildJsonPayload, buildLlmPrompt, downloadFile } from "./js/export.js";
 import { scoreLead } from "./js/scoring.js";
-import { createInitialState, getFilteredLeads, updateLead } from "./js/state.js";
+import { createInitialState, getFilteredLeads, updateKeywordTerm, updateLead } from "./js/state.js";
 import { loadState, saveState } from "./js/storage.js";
 import { bindUi, getFormParams, hydrateForm, renderApp, setStatus } from "./js/ui.js";
 
@@ -20,6 +20,10 @@ bindUi({
   },
   onFiltersChange: (filters) => {
     state.filters = filters;
+    saveAndRender();
+  },
+  onKeywordToggle: (term, active) => {
+    state = updateKeywordTerm(state, term, active);
     saveAndRender();
   },
   onSearch: async () => {
@@ -91,6 +95,8 @@ function applyScore(lead) {
 }
 
 function updateLeadsFromResult(result) {
+  state.keywordControls = result.keywordControls || { terms: [], removedCount: 0, rawCount: 0, relevantCount: 0 };
+
   if (result.leads.length) {
     state.leads = result.leads.map((lead) => applyScore(lead));
     saveAndRender();

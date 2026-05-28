@@ -22,6 +22,13 @@ const defaultFilters = {
   sortByScore: true
 };
 
+const defaultKeywordControls = {
+  terms: [],
+  removedCount: 0,
+  rawCount: 0,
+  relevantCount: 0
+};
+
 export function createInitialState(savedState) {
   return {
     searchParams: {
@@ -32,6 +39,7 @@ export function createInitialState(savedState) {
       ...defaultFilters,
       ...(savedState?.filters || {})
     },
+    keywordControls: normalizeKeywordControls(savedState?.keywordControls),
     leads: Array.isArray(savedState?.leads) ? savedState.leads : []
   };
 }
@@ -49,6 +57,7 @@ export function getFilteredLeads(state) {
   const city = normalizeText(filters.city);
   const category = normalizeText(filters.category);
   const minScore = Number(filters.minScore) || 0;
+  const activeKeywordTerms = getActiveKeywordTerms(state);
 
   const result = state.leads.filter((lead) => {
     const haystack = normalizeText([
@@ -68,6 +77,7 @@ export function getFilteredLeads(state) {
     if (filters.websiteOnly && !lead.website) return false;
     if (filters.emailOnly && !lead.email) return false;
     if ((lead.score || 0) < minScore) return false;
+    if (activeKeywordTerms && !hasActiveKeywordMatch(lead, activeKeywordTerms)) return false;
     return true;
   });
 
@@ -80,4 +90,44 @@ export function getFilteredLeads(state) {
 
 export function getCategories(leads) {
   return [...new Set(leads.map((lead) => lead.category).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
+export function updateKeywordTerm(state, term, active) {
+  return {
+    ...state,
+    keywordControls: {
+      ...normalizeKeywordControls(state.keywordControls),
+      terms: normalizeKeywordControls(state.keywordControls).terms.map((entry) => (
+        normalizeText(entry.term) === normalizeText(term) ? { ...entry, active } : entry
+      ))
+    }
+  };
+}
+
+function normalizeKeywordControls(keywordControls) {
+  const terms = Array.isArray(keywordControls?.terms) ? keywordControls.terms : [];
+
+  return {
+    ...defaultKeywordControls,
+    ...(keywordControls || {}),
+    terms: terms.map((entry) => ({
+      term: String(entry.term || ""),
+      active: entry.active !== false,
+      count: Number(entry.count) || 0
+    })).filter((entry) => entry.term)
+  };
+}
+
+function getActiveKeywordTerms(state) {
+  if ((state.searchParams?.sourceMode || "osm") !== "osm") return null;
+
+  const terms = normalizeKeywordControls(state.keywordControls).terms;
+  if (!terms.length) return null;
+
+  return new Set(terms.filter((entry) => entry.active).map((entry) => normalizeText(entry.term)));
+}
+
+function hasActiveKeywordMatch(lead, activeTerms) {
+  const matchedTerms = Array.isArray(lead.matchedTerms) ? lead.matchedTerms : [];
+  return matchedTerms.some((term) => activeTerms.has(normalizeText(term)));
 }
