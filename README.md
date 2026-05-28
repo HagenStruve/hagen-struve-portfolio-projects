@@ -24,6 +24,10 @@ Diese bestehenden Projektordner bleiben unverändert:
 
 Die Root-Seite verlinkt nur auf diese Ordner.
 
+## Experimente / Archiv
+
+- `LeadPilot-Scraper-v5` - experimenteller API-first Leadgenerierungs-Prototyp, aktuell nicht im Portfolio verlinkt.
+
 ## Lokal testen
 
 In VS Code:
