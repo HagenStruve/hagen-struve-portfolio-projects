@@ -40,6 +40,7 @@ export function createDemoLeads(params, apiPreparedMode = false) {
       userRatingsTotal: 12 + index * 11,
       reviews: 12 + index * 11,
       googleMapsUri: "",
+      mapsLink: "",
       source,
       status: "Neu",
       tags: [keyword, region, source],

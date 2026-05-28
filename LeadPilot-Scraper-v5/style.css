@@ -182,7 +182,7 @@ p {
 
 .api-guide-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -206,6 +206,10 @@ p {
   padding-left: 18px;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.wide-guide {
+  grid-column: span 2;
 }
 
 .api-guide-actions {
@@ -255,6 +259,18 @@ p {
   color: #baffe8;
   border-color: rgba(96, 245, 189, 0.38);
   background: rgba(96, 245, 189, 0.13);
+}
+
+.api-mode-pill.osm {
+  color: #b8f7ff;
+  border-color: rgba(98, 183, 255, 0.4);
+  background: rgba(98, 183, 255, 0.13);
+}
+
+.api-mode-pill.warning {
+  color: #ffc0cf;
+  border-color: rgba(255, 124, 157, 0.38);
+  background: rgba(255, 124, 157, 0.13);
 }
 
 .stat-card {
@@ -597,6 +613,10 @@ td a {
 
   .api-guide-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wide-guide {
+    grid-column: auto;
   }
 }
 

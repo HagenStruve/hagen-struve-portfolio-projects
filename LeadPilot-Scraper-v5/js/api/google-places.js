@@ -107,6 +107,7 @@ export function mapGooglePlaceToLead(place, params = {}) {
     userRatingsTotal,
     reviews: userRatingsTotal,
     googleMapsUri: place.googleMapsUri || "",
+    mapsLink: place.googleMapsUri || "",
     googlePlaceId: place.id || "",
     businessStatus: place.businessStatus || "",
     source: "Google Places",

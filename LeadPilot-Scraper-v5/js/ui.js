@@ -27,6 +27,7 @@ const elements = {
     region: document.querySelector("#region"),
     city: document.querySelector("#city"),
     limit: document.querySelector("#limit"),
+    sourceMode: document.querySelector("#sourceMode"),
     apiKey: document.querySelector("#apiKey")
   },
   filters: {
@@ -57,7 +58,10 @@ export function bindUi(handlers) {
   elements.copyPromptButton.addEventListener("click", copyPrompt);
 
   const syncParams = debounce(() => callbacks.onParamsChange(getFormParams()));
-  Object.values(elements.fields).forEach((field) => field.addEventListener("input", syncParams));
+  Object.values(elements.fields).forEach((field) => {
+    field.addEventListener("input", syncParams);
+    field.addEventListener("change", syncParams);
+  });
 
   const syncFilters = () => callbacks.onFiltersChange(getFilters());
   Object.values(elements.filters).forEach((field) => field.addEventListener("input", syncFilters));
@@ -88,6 +92,7 @@ export function hydrateForm(state) {
 
 export function getFormParams() {
   return {
+    sourceMode: elements.fields.sourceMode.value || "demo",
     keyword: elements.fields.keyword.value.trim() || "Lead",
     state: elements.fields.state.value.trim() || "Bundesland",
     region: elements.fields.region.value.trim() || "Region",
@@ -99,7 +104,7 @@ export function getFormParams() {
 
 export function renderApp(state, visibleLeads, promptText = "") {
   renderStats(state.leads);
-  renderApiMode(state.searchParams.apiKey);
+  renderApiMode(state.searchParams);
   renderCategories(state.leads, state.filters.category);
   renderRows(visibleLeads);
 
@@ -152,11 +157,25 @@ function renderStats(leads) {
   elements.stats.email.textContent = String(leads.filter((lead) => lead.email).length);
 }
 
-function renderApiMode(apiKey) {
-  const hasKey = Boolean(String(apiKey || "").trim());
-  elements.apiModeStatus.textContent = hasKey ? "Google Places API vorbereitet" : "Demo-Modus aktiv";
-  elements.apiModeStatus.classList.toggle("api", hasKey);
-  elements.apiModeStatus.classList.toggle("demo", !hasKey);
+function renderApiMode(searchParams) {
+  const mode = searchParams.sourceMode || "demo";
+  const hasKey = Boolean(String(searchParams.apiKey || "").trim());
+  elements.apiModeStatus.classList.remove("demo", "api", "osm", "warning");
+
+  if (mode === "osm") {
+    elements.apiModeStatus.textContent = "OpenStreetMap aktiv";
+    elements.apiModeStatus.classList.add("osm");
+    return;
+  }
+
+  if (mode === "google") {
+    elements.apiModeStatus.textContent = hasKey ? "Google Places aktiv" : "Google API-Key fehlt";
+    elements.apiModeStatus.classList.add(hasKey ? "api" : "warning");
+    return;
+  }
+
+  elements.apiModeStatus.textContent = "Demo-Modus aktiv";
+  elements.apiModeStatus.classList.add("demo");
 }
 
 function renderCategories(leads, activeCategory) {
@@ -195,6 +214,7 @@ function renderRows(leads) {
         ${lead.phone ? `<div>${escapeHtml(lead.phone)}</div>` : `<span class="muted">Keine Telefonnummer</span>`}
         ${lead.website ? `<a href="${escapeAttribute(lead.website)}" target="_blank" rel="noopener noreferrer">Website</a>` : `<span class="muted">Keine Website</span>`}
         ${lead.googleMapsUri ? `<a href="${escapeAttribute(lead.googleMapsUri)}" target="_blank" rel="noopener noreferrer">Google Maps</a>` : ""}
+        ${lead.mapsLink && !lead.googleMapsUri ? `<a href="${escapeAttribute(lead.mapsLink)}" target="_blank" rel="noopener noreferrer">Karte</a>` : ""}
         ${lead.email ? `<div>${escapeHtml(lead.email)}</div>` : `<span class="muted">Keine E-Mail</span>`}
         ${renderRating(lead)}
       </td>

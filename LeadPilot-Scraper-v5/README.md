@@ -17,10 +17,41 @@ LeadPilot soll Nutzer dabei unterstützen, Suchparameter für potenzielle Leads 
 Typischer Workflow:
 
 1. Branche, Keyword und Region eingeben.
-2. Demo-Leads erzeugen oder später offizielle Google-Places-/Maps-Daten nutzen.
+2. Datenquelle wählen: Demo, OpenStreetMap oder Google Places.
 3. Leads nach Score, Kontaktqualität und Status filtern.
 4. CSV, JSON oder LLM-Prompt exportieren.
 5. Leads extern priorisieren, clustern und bewerten.
+
+## Suchmodi
+
+### Demo
+
+- kostenlos
+- keine externen Requests
+- realistische Beispieldaten
+- ideal für Portfolio, Tests und UI-Demo
+
+### OpenStreetMap / Overpass API
+
+- kostenlos
+- echte öffentliche Daten
+- kein API-Key nötig
+- gute MVP-Lösung für erste echte Leadlisten
+- Datenqualität kann schwanken, insbesondere bei Telefon, Website und E-Mail
+
+Die OSM-Schicht liegt hier:
+
+```text
+js/api/overpass.js
+```
+
+### Google Places API
+
+- optional
+- benötigt API-Key
+- bessere Businessdaten
+- kann Kosten verursachen
+- API-Key bleibt lokal im Browser
 
 ## Google Places API
 

@@ -11,6 +11,7 @@ const headers = [
   "Rating",
   "Bewertungen",
   "Google Maps",
+  "Kartenlink",
   "Quelle",
   "Score",
   "Priorität",
@@ -35,6 +36,7 @@ export function buildCsv(leads) {
       lead.rating,
       lead.userRatingsTotal,
       lead.googleMapsUri,
+      lead.mapsLink,
       lead.source,
       lead.score,
       lead.priority,
@@ -66,7 +68,8 @@ export function buildLlmPrompt(leads, searchParams) {
     state: searchParams.state,
     region: searchParams.region,
     city: searchParams.city,
-    limit: searchParams.limit
+    limit: searchParams.limit,
+    sourceMode: searchParams.sourceMode
   };
 
   return [

@@ -1,4 +1,5 @@
 import { searchGooglePlaces } from "./js/api/google-places.js";
+import { searchOverpassLeads } from "./js/api/overpass.js";
 import { createDemoLeads } from "./js/demo-data.js";
 import { buildCsv, buildJsonPayload, buildLlmPrompt, downloadFile } from "./js/export.js";
 import { scoreLead } from "./js/scoring.js";
@@ -24,32 +25,47 @@ bindUi({
   },
   onSearch: async () => {
     state.searchParams = getFormParams();
+    const sourceMode = state.searchParams.sourceMode || "demo";
 
-    if (state.searchParams.apiKey) {
+    if (sourceMode === "demo") {
+      state.leads = createDemoScoredLeads(false);
+      setStatus("Demo-Modus aktiv. Es wurden realistische Beispieldaten ohne externe Requests erzeugt.");
+      saveAndRender();
+      return;
+    }
+
+    if (sourceMode === "osm") {
+      setStatus("OpenStreetMap/Overpass Suche läuft...");
+      const result = await searchOverpassLeads(state.searchParams);
+      setStatus(result.message);
+      updateLeadsFromResult(result);
+      return;
+    }
+
+    if (sourceMode === "google") {
+      if (!state.searchParams.apiKey) {
+        setStatus("Für Google Places wird ein API-Key benötigt.");
+        saveAndRender();
+        return;
+      }
+
       setStatus("Google Places Suche läuft...");
       const result = await searchGooglePlaces(state.searchParams);
       setStatus(result.message);
-
-      if (result.leads.length) {
-        state.leads = result.leads.map((lead) => applyScore(lead));
-        saveAndRender();
-      } else if (!result.error) {
-        state.leads = [];
-        saveAndRender();
-      }
-
+      updateLeadsFromResult(result);
       return;
-    } else {
-      setStatus("Kein API-Key gesetzt. Demo-Modus aktiv.");
     }
 
-    state.leads = createDemoScoredLeads(true);
+    state.leads = createDemoScoredLeads(false);
+    setStatus("Unbekannte Datenquelle. Demo-Modus aktiv.");
     saveAndRender();
   },
   onDemo: () => {
     state.searchParams = getFormParams();
+    state.searchParams.sourceMode = "demo";
     state.leads = createDemoScoredLeads(false);
     setStatus("Demo-Leads wurden lokal erzeugt und bewertet.");
+    hydrateForm(state);
     saveAndRender();
   },
   onLeadStatusChange: (leadId, status) => {
@@ -94,6 +110,18 @@ function applyScore(lead) {
   };
 }
 
+function updateLeadsFromResult(result) {
+  if (result.leads.length) {
+    state.leads = result.leads.map((lead) => applyScore(lead));
+    saveAndRender();
+  } else if (!result.error) {
+    state.leads = [];
+    saveAndRender();
+  } else {
+    saveAndRender();
+  }
+}
+
 function normalizeStoredLead(lead) {
   const scored = typeof lead.score === "number" && lead.priority
     ? { score: lead.score, priority: lead.priority, scoreReasons: lead.scoreReasons || [] }
@@ -105,6 +133,7 @@ function normalizeStoredLead(lead) {
     status: lead.status || "Neu",
     tags: Array.isArray(lead.tags) ? lead.tags : [lead.category, lead.city].filter(Boolean),
     notes: lead.notes || "",
+    mapsLink: lead.mapsLink || lead.googleMapsUri || "",
     ...scored
   };
 }

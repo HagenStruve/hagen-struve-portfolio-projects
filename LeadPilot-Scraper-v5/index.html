@@ -58,11 +58,19 @@
 
       <div class="api-guide-grid">
         <article>
-          <strong>Ohne API-Key</strong>
+          <strong>Demo-Modus</strong>
           <ul>
             <li>LeadPilot erzeugt realistische Demo-Leads.</li>
             <li>Ideal für Portfolio, Tests und UI-Demo.</li>
             <li>Keine externen Requests.</li>
+          </ul>
+        </article>
+        <article>
+          <strong>OpenStreetMap</strong>
+          <ul>
+            <li>Kostenlose öffentliche Daten über Overpass API.</li>
+            <li>Kein API-Key nötig.</li>
+            <li>Datenqualität kann schwanken.</li>
           </ul>
         </article>
         <article>
@@ -81,14 +89,14 @@
             <li>Nicht in CSV/JSON-Exports enthalten.</li>
           </ul>
         </article>
-        <article>
+        <article class="wide-guide">
           <strong>Kurzanleitung</strong>
           <ol>
             <li>Google Cloud Projekt erstellen.</li>
             <li>Places API aktivieren.</li>
             <li>Billing aktivieren.</li>
             <li>API-Key erstellen.</li>
-            <li>API-Key in LeadPilot einfügen.</li>
+            <li>Datenquelle „Google Places“ wählen und API-Key in LeadPilot einfügen.</li>
           </ol>
         </article>
       </div>
@@ -107,6 +115,15 @@
         </div>
 
         <div class="field-grid">
+          <label>
+            <span>Datenquelle</span>
+            <select id="sourceMode" name="sourceMode">
+              <option value="demo">Demo</option>
+              <option value="osm">OpenStreetMap</option>
+              <option value="google">Google Places</option>
+            </select>
+          </label>
+
           <label>
             <span>Keyword / Branche</span>
             <input id="keyword" name="keyword" type="text" autocomplete="off">
@@ -132,16 +149,15 @@
             <input id="limit" name="limit" type="number" min="3" max="50">
           </label>
 
-          <label>
+          <label class="api-key-field">
             <span>Google Places API-Key optional</span>
             <input id="apiKey" name="apiKey" type="password" placeholder="Bleibt lokal im Browser" autocomplete="off">
-            <small class="field-hint">Ohne API-Key läuft LeadPilot im Demo-Modus.</small>
+            <small class="field-hint">Ohne API-Key läuft LeadPilot nur im Demo- oder OpenStreetMap-Modus.</small>
           </label>
         </div>
 
         <p class="helper">
-          Demo-Modus erzeugt realistische Beispieldaten ohne externe Anfrage.
-          Eine spätere Google-Places-/Maps-API-Anbindung ist als separater Adapter vorbereitet.
+          Wähle Demo für Tests, OpenStreetMap für kostenlose öffentliche Daten oder Google Places für Businessdaten mit API-Key.
         </p>
 
         <div class="actions">

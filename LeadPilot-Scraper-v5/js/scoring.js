@@ -22,6 +22,11 @@ export function scoreLead(lead, keyword = "") {
     reasons.push("Telefon fehlt");
   }
 
+  if (hasValue(lead.address)) {
+    score += 10;
+    reasons.push("Adresse vorhanden");
+  }
+
   if (keywordHit) {
     score += 20;
     reasons.push("Kategorie passt zum Suchbegriff");
