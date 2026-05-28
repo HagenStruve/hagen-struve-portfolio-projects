@@ -3,7 +3,6 @@ import { clamp, debounce, escapeAttribute, escapeHtml } from "./utils/helpers.js
 
 const elements = {
   form: document.querySelector("#leadForm"),
-  demoButton: document.querySelector("#demoBtn"),
   csvButton: document.querySelector("#csvBtn"),
   jsonButton: document.querySelector("#jsonBtn"),
   promptButton: document.querySelector("#promptBtn"),
@@ -51,7 +50,6 @@ export function bindUi(handlers) {
     callbacks.onSearch();
   });
 
-  elements.demoButton.addEventListener("click", callbacks.onDemo);
   elements.csvButton.addEventListener("click", callbacks.onExportCsv);
   elements.jsonButton.addEventListener("click", callbacks.onExportJson);
   elements.promptButton.addEventListener("click", callbacks.onBuildPrompt);
@@ -92,7 +90,7 @@ export function hydrateForm(state) {
 
 export function getFormParams() {
   return {
-    sourceMode: elements.fields.sourceMode.value || "demo",
+    sourceMode: elements.fields.sourceMode.value || "osm",
     keyword: elements.fields.keyword.value.trim() || "Lead",
     state: elements.fields.state.value.trim() || "Bundesland",
     region: elements.fields.region.value.trim() || "Region",
@@ -109,7 +107,7 @@ export function renderApp(state, visibleLeads, promptText = "") {
   renderRows(visibleLeads);
 
   elements.leadCount.textContent = String(visibleLeads.length);
-  elements.sourceLabel.textContent = state.leads[0]?.source ? `Quelle: ${state.leads[0].source}` : "Quelle: Demo/API vorbereitet";
+  elements.sourceLabel.textContent = state.leads[0]?.source ? `Quelle: ${state.leads[0].source}` : "Quelle: OpenStreetMap / Google Places";
 
   if (promptText) {
     elements.promptPanel.hidden = false;
@@ -158,9 +156,9 @@ function renderStats(leads) {
 }
 
 function renderApiMode(searchParams) {
-  const mode = searchParams.sourceMode || "demo";
+  const mode = searchParams.sourceMode || "osm";
   const hasKey = Boolean(String(searchParams.apiKey || "").trim());
-  elements.apiModeStatus.classList.remove("demo", "api", "osm", "warning");
+  elements.apiModeStatus.classList.remove("api", "osm", "warning");
 
   if (mode === "osm") {
     elements.apiModeStatus.textContent = "OpenStreetMap aktiv";
@@ -174,8 +172,8 @@ function renderApiMode(searchParams) {
     return;
   }
 
-  elements.apiModeStatus.textContent = "Demo-Modus aktiv";
-  elements.apiModeStatus.classList.add("demo");
+  elements.apiModeStatus.textContent = "OpenStreetMap aktiv";
+  elements.apiModeStatus.classList.add("osm");
 }
 
 function renderCategories(leads, activeCategory) {
@@ -189,7 +187,7 @@ function renderCategories(leads, activeCategory) {
 
 function renderRows(leads) {
   if (!leads.length) {
-    elements.rows.innerHTML = `<tr><td colspan="7" class="empty">Keine passenden Leads. Demo starten oder Filter lockern.</td></tr>`;
+    elements.rows.innerHTML = `<tr><td colspan="7" class="empty">Keine passenden Leads. Suche starten oder Filter lockern.</td></tr>`;
     return;
   }
 

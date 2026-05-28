@@ -8,7 +8,7 @@ const defaultSearchParams = {
   region: "Steinburg",
   city: "Itzehoe",
   limit: 12,
-  sourceMode: "demo",
+  sourceMode: "osm",
   apiKey: ""
 };
 

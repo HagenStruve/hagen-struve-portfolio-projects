@@ -12,27 +12,21 @@ Es gibt keinen Build-Prozess, kein Framework und keinen Backend-Zwang.
 
 ## Projektidee
 
-LeadPilot soll Nutzer dabei unterstützen, Suchparameter für potenzielle Leads zu definieren, Ergebnisse strukturiert zu bewerten und anschließend für weitere Auswertung zu exportieren.
+LeadPilot unterstützt Nutzer dabei, Suchparameter für potenzielle Leads zu definieren, echte Unternehmensdaten zu laden, Ergebnisse zu bewerten und anschließend für weitere Auswertung zu exportieren.
 
 Typischer Workflow:
 
 1. Branche, Keyword und Region eingeben.
-2. Datenquelle wählen: Demo, OpenStreetMap oder Google Places.
+2. Datenquelle wählen: OpenStreetMap oder Google Places.
 3. Leads nach Score, Kontaktqualität und Status filtern.
 4. CSV, JSON oder LLM-Prompt exportieren.
 5. Leads extern priorisieren, clustern und bewerten.
 
-## Suchmodi
-
-### Demo
-
-- kostenlos
-- keine externen Requests
-- realistische Beispieldaten
-- ideal für Portfolio, Tests und UI-Demo
+## Datenquellen
 
 ### OpenStreetMap / Overpass API
 
+- Standard-Datenquelle
 - kostenlos
 - echte öffentliche Daten
 - kein API-Key nötig
@@ -62,7 +56,7 @@ Die App unterstützt einen offiziellen Google-Places-API-Flow über die statisch
 - Google Places/Maps API als getrennter Adapter
 - API-Key bleibt lokal im Browser
 - keine API-Keys im Repository
-- bei fehlendem API-Key läuft automatisch der Demo-Modus
+- bei fehlendem API-Key zeigt LeadPilot einen Hinweis und erzeugt keine Ersatzdaten
 - bei API-/CORS-/Quota-Problemen zeigt die UI eine verständliche Fehlermeldung
 
 Die API-Schicht liegt hier:
@@ -84,7 +78,7 @@ Kurzablauf:
 3. Billing aktivieren. Google Places API kann Kosten verursachen.
 4. API-Key erstellen.
 5. API-Key sinnvoll einschränken, z. B. nach Website/HTTP-Referrer und API.
-6. Key lokal in LeadPilot in das Feld `Google Places API-Key optional` einfügen.
+6. Datenquelle `Google Places` wählen und Key lokal in LeadPilot einfügen.
 
 Hilfreiche Links:
 
@@ -93,15 +87,12 @@ Hilfreiche Links:
 
 Der API-Key bleibt lokal im Browser. Er wird nicht hardcoded, nicht in Git committet und nicht in CSV/JSON-Exports geschrieben.
 
-## Demo-Modus
-
-Der Demo-Modus erzeugt realistische Beispieldaten lokal im Browser. Er dient als sichere Portfolio-Demo und als Basis für die spätere API-Anbindung.
-
 ## Lokale Speicherung
 
 LeadPilot nutzt `localStorage` für:
 
 - Suchparameter
+- Datenquelle
 - API-Key optional
 - Leads
 - Lead-Status
@@ -117,11 +108,11 @@ Die statische MVP-App ist in kleine Module getrennt:
 - `app.js`: App-Koordination und Event-Fluss
 - `js/state.js`: State, Filterung, Statuswerte
 - `js/storage.js`: localStorage-Persistenz
-- `js/demo-data.js`: sichere Demo-Leadgenerierung
 - `js/scoring.js`: Lead-Scoring und Priorität
 - `js/export.js`: CSV, JSON und LLM-Prompt
 - `js/ui.js`: DOM-Rendering und UI-Events
-- `js/api/google-places.js`: vorbereiteter API-Adapter
+- `js/api/overpass.js`: OpenStreetMap-/Overpass-Adapter
+- `js/api/google-places.js`: Google-Places-Adapter
 - `js/utils/helpers.js`: kleine Hilfsfunktionen
 
 ## Lead-Scoring
@@ -136,8 +127,9 @@ Bewertet werden unter anderem:
 - Website vorhanden
 - Telefonnummer vorhanden
 - E-Mail vorhanden
+- Adresse vorhanden
 - Kategorie passt zum Suchbegriff
-- vorbereitete Bewertungsanzahl
+- Google Rating/Bewertungen, falls vorhanden
 - fehlende Daten
 
 ## Statussystem
@@ -166,6 +158,8 @@ Die Exporte enthalten unter anderem:
 - Score
 - Priorität
 - Status
+- Quelle
+- Kartenlink
 - Tags
 - Notizen
 - Rating

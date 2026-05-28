@@ -22,7 +22,7 @@ export async function searchGooglePlaces(params) {
   if (!params.apiKey) {
     return {
       leads: [],
-      message: "Kein API-Key gesetzt. Demo-Modus aktiv.",
+      message: "Für Google Places wird ein API-Key benötigt. Alternativ kann OpenStreetMap kostenlos genutzt werden.",
       usedApi: false
     };
   }

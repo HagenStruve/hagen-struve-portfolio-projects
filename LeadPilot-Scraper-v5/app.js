@@ -1,6 +1,5 @@
 import { searchGooglePlaces } from "./js/api/google-places.js";
 import { searchOverpassLeads } from "./js/api/overpass.js";
-import { createDemoLeads } from "./js/demo-data.js";
 import { buildCsv, buildJsonPayload, buildLlmPrompt, downloadFile } from "./js/export.js";
 import { scoreLead } from "./js/scoring.js";
 import { createInitialState, getFilteredLeads, updateLead } from "./js/state.js";
@@ -25,14 +24,7 @@ bindUi({
   },
   onSearch: async () => {
     state.searchParams = getFormParams();
-    const sourceMode = state.searchParams.sourceMode || "demo";
-
-    if (sourceMode === "demo") {
-      state.leads = createDemoScoredLeads(false);
-      setStatus("Demo-Modus aktiv. Es wurden realistische Beispieldaten ohne externe Requests erzeugt.");
-      saveAndRender();
-      return;
-    }
+    const sourceMode = state.searchParams.sourceMode || "osm";
 
     if (sourceMode === "osm") {
       setStatus("OpenStreetMap/Overpass Suche läuft...");
@@ -44,7 +36,7 @@ bindUi({
 
     if (sourceMode === "google") {
       if (!state.searchParams.apiKey) {
-        setStatus("Für Google Places wird ein API-Key benötigt.");
+        setStatus("Für Google Places wird ein API-Key benötigt. Alternativ kann OpenStreetMap kostenlos genutzt werden.");
         saveAndRender();
         return;
       }
@@ -56,16 +48,8 @@ bindUi({
       return;
     }
 
-    state.leads = createDemoScoredLeads(false);
-    setStatus("Unbekannte Datenquelle. Demo-Modus aktiv.");
-    saveAndRender();
-  },
-  onDemo: () => {
-    state.searchParams = getFormParams();
-    state.searchParams.sourceMode = "demo";
-    state.leads = createDemoScoredLeads(false);
-    setStatus("Demo-Leads wurden lokal erzeugt und bewertet.");
-    hydrateForm(state);
+    state.searchParams.sourceMode = "osm";
+    setStatus("Unbekannte Datenquelle. OpenStreetMap ist als Standard aktiv.");
     saveAndRender();
   },
   onLeadStatusChange: (leadId, status) => {
@@ -96,10 +80,6 @@ bindUi({
     setStatus("LLM-Prompt wurde erzeugt.");
   }
 });
-
-function createDemoScoredLeads(apiPreparedMode) {
-  return createDemoLeads(state.searchParams, apiPreparedMode).map((lead) => applyScore(lead));
-}
 
 function applyScore(lead) {
   const scored = scoreLead(lead, state.searchParams.keyword);

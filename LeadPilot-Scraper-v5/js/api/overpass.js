@@ -42,7 +42,7 @@ export async function searchOverpassLeads(params) {
   } catch (error) {
     return {
       leads: [],
-      message: `OpenStreetMap/Overpass konnte nicht laden: ${error.message || "Netzwerk- oder API-Fehler"}. Bitte später erneut versuchen oder Demo-Modus nutzen.`,
+      message: `OpenStreetMap/Overpass konnte nicht laden: ${error.message || "Netzwerk- oder API-Fehler"}. Bitte später erneut versuchen oder Suchparameter anpassen.`,
       usedApi: true,
       error
     };

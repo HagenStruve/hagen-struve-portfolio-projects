@@ -249,12 +249,6 @@ p {
   text-transform: uppercase;
 }
 
-.api-mode-pill.demo {
-  color: #ffe7a3;
-  border-color: rgba(255, 209, 102, 0.38);
-  background: rgba(255, 209, 102, 0.13);
-}
-
 .api-mode-pill.api {
   color: #baffe8;
   border-color: rgba(96, 245, 189, 0.38);

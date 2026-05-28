@@ -16,15 +16,15 @@
         <p class="eyebrow">LeadPilot MVP</p>
         <h1>Lead-Dashboard für strukturierte Akquise</h1>
         <p>
-          Definiere Zielmärkte, generiere Demo-Leads, bewerte Potenzial automatisch
+          Definiere Zielmärkte, lade echte Unternehmensdaten, bewerte Potenzial automatisch
           und exportiere die Liste für CSV-, JSON- oder LLM-Workflows.
         </p>
       </div>
 
       <aside class="notice-card">
         <strong>API-first, lokal & sicher</strong>
-        <span>Google Places/Maps ist vorbereitet, aber noch nicht produktiv angebunden.</span>
-        <span>Kein Scraping, keine Schutzumgehung. API-Key bleibt lokal im Browser.</span>
+        <span>OpenStreetMap funktioniert kostenlos ohne API-Key.</span>
+        <span>Google Places ist optional. Kein Scraping, keine Schutzumgehung.</span>
       </aside>
     </section>
 
@@ -50,47 +50,37 @@
     <section class="api-guide-card" aria-labelledby="apiGuideTitle">
       <div class="api-guide-head">
         <div>
-          <p class="eyebrow">Setup</p>
-          <h2 id="apiGuideTitle">Demo-Modus & Google Places API</h2>
+          <p class="eyebrow">Bedienung</p>
+          <h2 id="apiGuideTitle">So nutzt du LeadPilot</h2>
         </div>
-        <div class="api-mode-pill demo" id="apiModeStatus">Demo-Modus aktiv</div>
+        <div class="api-mode-pill osm" id="apiModeStatus">OpenStreetMap aktiv</div>
       </div>
 
       <div class="api-guide-grid">
         <article>
-          <strong>Demo-Modus</strong>
+          <strong>1. Datenquelle wählen</strong>
           <ul>
-            <li>LeadPilot erzeugt realistische Demo-Leads.</li>
-            <li>Ideal für Portfolio, Tests und UI-Demo.</li>
-            <li>Keine externen Requests.</li>
+            <li>OpenStreetMap: kostenlos, ohne API-Key.</li>
+            <li>Google Places: mit API-Key, bessere Daten.</li>
           </ul>
         </article>
         <article>
-          <strong>OpenStreetMap</strong>
+          <strong>2. Suche eingrenzen</strong>
           <ul>
-            <li>Kostenlose öffentliche Daten über Overpass API.</li>
-            <li>Kein API-Key nötig.</li>
-            <li>Datenqualität kann schwanken.</li>
+            <li>Branche/Keyword eingeben, z. B. Landmaschinen, Werkstatt oder Lohnunternehmen.</li>
+            <li>Bundesland, Kreis/Region und Stadt ergänzen.</li>
           </ul>
         </article>
         <article>
-          <strong>Mit Google API-Key</strong>
+          <strong>3. Leads prüfen</strong>
           <ul>
-            <li>Echte Unternehmensdaten über Google Places API.</li>
-            <li>Suche nach Branche und Region.</li>
-            <li>Export als CSV/JSON für spätere LLM-Auswertung.</li>
-          </ul>
-        </article>
-        <article>
-          <strong>API-Key bleibt lokal</strong>
-          <ul>
-            <li>Wird nur im Browser gespeichert.</li>
-            <li>Niemals automatisch ins Repository geschrieben.</li>
-            <li>Nicht in CSV/JSON-Exports enthalten.</li>
+            <li>Suche starten.</li>
+            <li>Score, Status und Kontaktdaten prüfen.</li>
+            <li>CSV/JSON exportieren oder optional an ein LLM geben.</li>
           </ul>
         </article>
         <article class="wide-guide">
-          <strong>Kurzanleitung</strong>
+          <strong>Google Places API einrichten</strong>
           <ol>
             <li>Google Cloud Projekt erstellen.</li>
             <li>Places API aktivieren.</li>
@@ -98,6 +88,10 @@
             <li>API-Key erstellen.</li>
             <li>Datenquelle „Google Places“ wählen und API-Key in LeadPilot einfügen.</li>
           </ol>
+        </article>
+        <article class="wide-guide">
+          <strong>OpenStreetMap Hinweis</strong>
+          <p>OpenStreetMap/Overpass ist kostenlos, liefert aber je nach Region nicht immer Telefonnummern, Websites oder vollständige Firmendaten.</p>
         </article>
       </div>
 
@@ -118,8 +112,7 @@
           <label>
             <span>Datenquelle</span>
             <select id="sourceMode" name="sourceMode">
-              <option value="demo">Demo</option>
-              <option value="osm">OpenStreetMap</option>
+              <option value="osm">OpenStreetMap / Overpass</option>
               <option value="google">Google Places</option>
             </select>
           </label>
@@ -152,31 +145,30 @@
           <label class="api-key-field">
             <span>Google Places API-Key optional</span>
             <input id="apiKey" name="apiKey" type="password" placeholder="Bleibt lokal im Browser" autocomplete="off">
-            <small class="field-hint">Ohne API-Key läuft LeadPilot nur im Demo- oder OpenStreetMap-Modus.</small>
+            <small class="field-hint">Für Google Places wird ein API-Key benötigt. OpenStreetMap funktioniert kostenlos ohne Key.</small>
           </label>
         </div>
 
         <p class="helper">
-          Wähle Demo für Tests, OpenStreetMap für kostenlose öffentliche Daten oder Google Places für Businessdaten mit API-Key.
+          OpenStreetMap ist kostenlos und benötigt keinen API-Key. Google Places liefert bessere Businessdaten, kann aber Kosten verursachen.
         </p>
 
         <div class="actions">
           <button class="primary" type="submit">Leads suchen</button>
-          <button class="secondary" id="demoBtn" type="button">Demo-Leads erzeugen</button>
           <button class="secondary" id="csvBtn" type="button">CSV exportieren</button>
           <button class="secondary" id="jsonBtn" type="button">JSON exportieren</button>
           <button class="secondary" id="promptBtn" type="button">LLM Prompt erzeugen</button>
         </div>
 
         <p class="api-cost-note">Google Places API kann Kosten verursachen. Der API-Key bleibt lokal im Browser und wird nicht exportiert.</p>
-        <p class="status-line" id="statusLine" role="status">Bereit für Demo-Recherche.</p>
+        <p class="status-line" id="statusLine" role="status">Bereit für OpenStreetMap-Recherche.</p>
       </form>
 
       <aside class="workflow-card">
         <p class="eyebrow">Workflow</p>
         <h2>Von Suche zu Priorität</h2>
         <ol>
-          <li>Suchparameter definieren und Demo-Leads erzeugen.</li>
+          <li>Datenquelle wählen und Suchparameter definieren.</li>
           <li>Leads nach Score, Kontaktqualität und Relevanz filtern.</li>
           <li>Export an ein LLM geben, um nächste Akquise-Schritte zu planen.</li>
         </ol>
@@ -231,7 +223,7 @@
         </div>
         <div class="metrics">
           <span><strong id="leadCount">0</strong> sichtbar</span>
-          <span id="sourceLabel">Quelle: Demo/API vorbereitet</span>
+          <span id="sourceLabel">Quelle: OpenStreetMap / Google Places</span>
         </div>
       </div>
 
@@ -250,7 +242,7 @@
           </thead>
           <tbody id="leadRows">
             <tr>
-              <td colspan="7" class="empty">Noch keine Leads. Starte den Demo-Modus oder eine vorbereitete Suche.</td>
+              <td colspan="7" class="empty">Noch keine Leads. Starte eine OpenStreetMap- oder Google-Places-Suche.</td>
             </tr>
           </tbody>
         </table>
