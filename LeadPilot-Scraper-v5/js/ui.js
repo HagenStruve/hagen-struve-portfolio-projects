@@ -12,6 +12,7 @@ const elements = {
   leadCount: document.querySelector("#leadCount"),
   sourceLabel: document.querySelector("#sourceLabel"),
   statusLine: document.querySelector("#statusLine"),
+  apiModeStatus: document.querySelector("#apiModeStatus"),
   promptPanel: document.querySelector("#promptPanel"),
   promptOutput: document.querySelector("#promptOutput"),
   stats: {
@@ -98,6 +99,7 @@ export function getFormParams() {
 
 export function renderApp(state, visibleLeads, promptText = "") {
   renderStats(state.leads);
+  renderApiMode(state.searchParams.apiKey);
   renderCategories(state.leads, state.filters.category);
   renderRows(visibleLeads);
 
@@ -148,6 +150,13 @@ function renderStats(leads) {
   elements.stats.high.textContent = String(leads.filter((lead) => lead.priority === "high").length);
   elements.stats.website.textContent = String(leads.filter((lead) => lead.website).length);
   elements.stats.email.textContent = String(leads.filter((lead) => lead.email).length);
+}
+
+function renderApiMode(apiKey) {
+  const hasKey = Boolean(String(apiKey || "").trim());
+  elements.apiModeStatus.textContent = hasKey ? "Google Places API vorbereitet" : "Demo-Modus aktiv";
+  elements.apiModeStatus.classList.toggle("api", hasKey);
+  elements.apiModeStatus.classList.toggle("demo", !hasKey);
 }
 
 function renderCategories(leads, activeCategory) {

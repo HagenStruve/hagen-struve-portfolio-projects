@@ -47,6 +47,58 @@
       </article>
     </section>
 
+    <section class="api-guide-card" aria-labelledby="apiGuideTitle">
+      <div class="api-guide-head">
+        <div>
+          <p class="eyebrow">Setup</p>
+          <h2 id="apiGuideTitle">Demo-Modus & Google Places API</h2>
+        </div>
+        <div class="api-mode-pill demo" id="apiModeStatus">Demo-Modus aktiv</div>
+      </div>
+
+      <div class="api-guide-grid">
+        <article>
+          <strong>Ohne API-Key</strong>
+          <ul>
+            <li>LeadPilot erzeugt realistische Demo-Leads.</li>
+            <li>Ideal für Portfolio, Tests und UI-Demo.</li>
+            <li>Keine externen Requests.</li>
+          </ul>
+        </article>
+        <article>
+          <strong>Mit Google API-Key</strong>
+          <ul>
+            <li>Echte Unternehmensdaten über Google Places API.</li>
+            <li>Suche nach Branche und Region.</li>
+            <li>Export als CSV/JSON für spätere LLM-Auswertung.</li>
+          </ul>
+        </article>
+        <article>
+          <strong>API-Key bleibt lokal</strong>
+          <ul>
+            <li>Wird nur im Browser gespeichert.</li>
+            <li>Niemals automatisch ins Repository geschrieben.</li>
+            <li>Nicht in CSV/JSON-Exports enthalten.</li>
+          </ul>
+        </article>
+        <article>
+          <strong>Kurzanleitung</strong>
+          <ol>
+            <li>Google Cloud Projekt erstellen.</li>
+            <li>Places API aktivieren.</li>
+            <li>Billing aktivieren.</li>
+            <li>API-Key erstellen.</li>
+            <li>API-Key in LeadPilot einfügen.</li>
+          </ol>
+        </article>
+      </div>
+
+      <div class="api-guide-actions">
+        <a class="guide-link" href="https://developers.google.com/maps/documentation/places/web-service/get-api-key" target="_blank" rel="noopener noreferrer">Google Places API öffnen</a>
+        <a class="guide-link secondary-link" href="https://console.cloud.google.com/apis/library/places.googleapis.com" target="_blank" rel="noopener noreferrer">Google Cloud Console</a>
+      </div>
+    </section>
+
     <section class="workspace">
       <form class="search-card" id="leadForm">
         <div class="section-title">
@@ -83,6 +135,7 @@
           <label>
             <span>Google Places API-Key optional</span>
             <input id="apiKey" name="apiKey" type="password" placeholder="Bleibt lokal im Browser" autocomplete="off">
+            <small class="field-hint">Ohne API-Key läuft LeadPilot im Demo-Modus.</small>
           </label>
         </div>
 

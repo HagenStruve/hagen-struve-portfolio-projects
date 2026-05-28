@@ -44,6 +44,24 @@ Für produktive Nutzung muss der Google Cloud API-Key korrekt auf die Places API
 
 Hinweis: Je nach API-Key-Restriktionen und Browserumgebung kann eine direkte Browser-Anfrage blockiert werden. Für eine spätere SaaS-Version ist ein sicherer Backend-Proxy empfehlenswert, damit API-Keys nicht clientseitig sichtbar sind.
 
+## Google Places API einrichten
+
+Kurzablauf:
+
+1. Google Cloud Projekt erstellen.
+2. Places API aktivieren.
+3. Billing aktivieren. Google Places API kann Kosten verursachen.
+4. API-Key erstellen.
+5. API-Key sinnvoll einschränken, z. B. nach Website/HTTP-Referrer und API.
+6. Key lokal in LeadPilot in das Feld `Google Places API-Key optional` einfügen.
+
+Hilfreiche Links:
+
+- Google Places API Key: https://developers.google.com/maps/documentation/places/web-service/get-api-key
+- Google Cloud Places API: https://console.cloud.google.com/apis/library/places.googleapis.com
+
+Der API-Key bleibt lokal im Browser. Er wird nicht hardcoded, nicht in Git committet und nicht in CSV/JSON-Exports geschrieben.
+
 ## Demo-Modus
 
 Der Demo-Modus erzeugt realistische Beispieldaten lokal im Browser. Er dient als sichere Portfolio-Demo und als Basis für die spätere API-Anbindung.
