@@ -1,3 +1,5 @@
+import { scaleGlow } from "./quality.js";
+
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export class Player {
@@ -119,7 +121,7 @@ export class Player {
   drawShip(ctx) {
     ctx.save();
     ctx.shadowColor = "rgba(68,247,255,0.85)";
-    ctx.shadowBlur = 24;
+    ctx.shadowBlur = scaleGlow(24);
 
     const body = ctx.createLinearGradient(0, -28, 0, 28);
     body.addColorStop(0, "#ffffff");
@@ -143,7 +145,7 @@ export class Player {
     ctx.stroke();
 
     ctx.shadowColor = "rgba(255,79,216,0.9)";
-    ctx.shadowBlur = 18;
+    ctx.shadowBlur = scaleGlow(18);
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
     ctx.arc(0, -4, 6.2, 0, Math.PI * 2);
@@ -158,7 +160,7 @@ export class Player {
     ctx.strokeStyle = "rgba(68,247,255,0.42)";
     ctx.lineWidth = 2;
     ctx.shadowColor = "rgba(68,247,255,0.85)";
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = scaleGlow(16);
     ctx.beginPath();
     ctx.arc(0, 0, 38 + Math.sin(this.enginePulse) * 2, 0, Math.PI * 2);
     ctx.stroke();

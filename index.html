@@ -6,6 +6,7 @@
   <title>Hagen Struve | AI Product Builder</title>
   <link rel="icon" type="image/png" href="./assets/brand/favicon.png">
   <link rel="apple-touch-icon" href="./assets/brand/apple-touch-icon.png">
+  <link rel="preload" as="image" href="./assets/Foto-hero.jpg" fetchpriority="high">
   <style>
     :root {
       --bg: #050706;
@@ -42,11 +43,15 @@
       width: 100vw;
       height: 100vh;
       z-index: 0;
+      opacity: .72;
+      transition: opacity 900ms ease;
       background:
         radial-gradient(circle at 68% 42%, rgba(105,240,138,.14), transparent 34rem),
         radial-gradient(circle at 18% 72%, rgba(116,240,223,.08), transparent 28rem),
         linear-gradient(120deg, #020403, #07100b 45%, #030605);
     }
+
+    body.effects-ready #particleWorld { opacity: 1; }
 
     .vignette {
       position: fixed;
@@ -252,6 +257,7 @@
       position: relative;
       width: 180px;
       height: 180px;
+      aspect-ratio: 1;
       border-radius: 50%;
       overflow: hidden;
       border: 1px solid rgba(105,240,138,.34);
@@ -262,6 +268,20 @@
       transform: translate3d(calc(var(--mx) * 10px), calc(var(--my) * 10px), 0);
       justify-self:end;
       background: rgba(0,0,0,.4);
+    }
+
+    .hero-image::before {
+      content:"";
+      position:absolute;
+      inset:-18%;
+      background:
+        radial-gradient(circle at 48% 32%, rgba(245,255,248,.3), rgba(105,240,138,.14) 26%, transparent 48%),
+        radial-gradient(circle at 50% 58%, rgba(105,240,138,.22), rgba(0,0,0,.5) 58%, transparent 72%),
+        linear-gradient(135deg, rgba(255,255,255,.08), rgba(105,240,138,.04));
+      filter: blur(14px);
+      transform: scale(1.04);
+      opacity: .9;
+      animation: heroImagePulse 2.8s ease-in-out infinite;
     }
 
     .hero-image::after {
@@ -277,6 +297,22 @@
       height:100%;
       object-fit:cover;
       filter: saturate(.92) contrast(1.04);
+      opacity: 0;
+      transform: scale(1.035);
+      transition: opacity 520ms ease, transform 820ms ease;
+      position: relative;
+      z-index: 1;
+      display: block;
+    }
+
+    .hero-image.is-loaded img {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .hero-image.is-loaded::before {
+      opacity: .2;
+      animation: none;
     }
 
     .hero-main { min-width:0; }
@@ -563,8 +599,20 @@
 
     @keyframes reveal { to { opacity: 1; transform: translateY(0); } }
     @keyframes wheel { 0% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, 18px); opacity: 0; } }
+    @keyframes heroImagePulse { 0%,100% { opacity: .7; transform: scale(1.02); } 50% { opacity: 1; transform: scale(1.08); } }
     @keyframes mockFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     @keyframes workflowPulse { 0%,100% { transform: translateY(0); border-color: rgba(255,255,255,.13); } 50% { transform: translateY(-5px); border-color: rgba(105,240,138,.28); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+
+      .hero-image::before { animation: none !important; }
+    }
 
     @media (max-width: 980px) {
       .side { display: none; }
@@ -647,7 +695,7 @@
         </div>
 
         <div class="hero-image">
-          <img src="assets/Foto.jpg" alt="Hagen Struve" />
+          <img src="./assets/Foto-hero.jpg" alt="Hagen Struve" width="180" height="180" loading="eager" decoding="async" fetchpriority="high" />
         </div>
       </div>
 
@@ -694,14 +742,16 @@
           <div class="workflow-copy">
             <div class="kicker">AI Systems</div>
             <h2>AI Workflows & Automatisierung</h2>
-            <p>Ich entwickle moderne Webanwendungen und beschäftige mich intensiv mit AI-gestützten Workflows, Automatisierung und API-basierten Tools zur Lösung realer Probleme.</p>
+            <p>Ich beschäftige mich intensiv mit modernen KI-Workflows, Automatisierung und API-basierten Anwendungen.</p>
+            <p>Dabei entwickle ich praxisnahe Prototypen und experimentiere mit digitalen Lösungen rund um AI-gestützte Workflows, Prozessautomatisierung, SaaS-Prototyping, API-Integrationen, Datenaufbereitung für LLMs und moderne Webanwendungen.</p>
+            <p>Mein Fokus liegt darauf, reale Probleme pragmatisch mit modernen Tools und KI-Unterstützung zu lösen.</p>
             <div class="workflow-badges">
-              <span class="workflow-badge">AI Workflows</span>
-              <span class="workflow-badge">Automatisierung</span>
-              <span class="workflow-badge">API Integrationen</span>
+              <span class="workflow-badge">AI-gestützte Workflows</span>
+              <span class="workflow-badge">Prozessautomatisierung</span>
               <span class="workflow-badge">SaaS Prototyping</span>
-              <span class="workflow-badge">KI-gestützte Tools</span>
-              <span class="workflow-badge">Prozessoptimierung</span>
+              <span class="workflow-badge">API-Integrationen</span>
+              <span class="workflow-badge">Datenaufbereitung für LLMs</span>
+              <span class="workflow-badge">Moderne Webanwendungen</span>
             </div>
           </div>
 
@@ -779,6 +829,7 @@
     const canvas = document.getElementById('particleWorld');
     const ctx = canvas.getContext('2d', { alpha: true });
     const root = document.documentElement;
+    const heroImage = document.querySelector('.hero-image img');
     const pointer = { x: 0, y: 0, tx: 0, ty: 0, nx: 0, ny: 0 };
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let width = 0, height = 0, dpr = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -792,8 +843,11 @@
     function animate(t){if(!running)return;pointer.x+=(pointer.tx-pointer.x)*.08;pointer.y+=(pointer.ty-pointer.y)*.08;pointer.nx=(pointer.x/width-.5)*2;pointer.ny=(pointer.y/height-.5)*2;root.style.setProperty('--mx',pointer.nx.toFixed(3));root.style.setProperty('--my',pointer.ny.toFixed(3));ctx.clearRect(0,0,width,height);const gradient=ctx.createRadialGradient(width*.56,height*.47,0,width*.56,height*.47,Math.min(width,height)*.72);gradient.addColorStop(0,'rgba(105,240,138,.15)');gradient.addColorStop(.42,'rgba(20,80,52,.04)');gradient.addColorStop(1,'rgba(0,0,0,0)');ctx.globalAlpha=1;ctx.fillStyle=gradient;ctx.fillRect(0,0,width,height);drawRing(t);sampled.length=0;projected.length=0;const sampleEvery=width<700?10:9;for(let i=0;i<particles.length;i++){const p=projectParticle(particles[i],t);projected.push(p);if(i%sampleEvery===0)sampled.push(p);}drawConnections(sampled);for(let i=0;i<projected.length;i++)drawParticle(projected[i]);ctx.globalAlpha=.32;ctx.strokeStyle='rgba(105,240,138,1)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(width*.56+pointer.nx*22,height*.49+pointer.ny*12,Math.min(width,height)*.58,Math.min(width,height)*.48,Math.sin(t*.00008)*.04,0,Math.PI*2);ctx.stroke();rafId=requestAnimationFrame(animate);}
     window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(resize,160);},{passive:true});
     window.addEventListener('pointermove',(event)=>{pointer.tx=event.clientX;pointer.ty=event.clientY;},{passive:true});
-    document.addEventListener('visibilitychange',()=>{running=!document.hidden;if(running&&!rafId)rafId=requestAnimationFrame(animate);if(!running&&rafId){cancelAnimationFrame(rafId);rafId=null;}});
-    pointer.tx=window.innerWidth*.58;pointer.ty=window.innerHeight*.45;pointer.x=pointer.tx;pointer.y=pointer.ty;resize();rafId=requestAnimationFrame(animate);
+    document.addEventListener('visibilitychange',()=>{running=!document.hidden;if(running&&!rafId&&!prefersReducedMotion)rafId=requestAnimationFrame(animate);if(!running&&rafId){cancelAnimationFrame(rafId);rafId=null;}});
+    function markHeroImageReady(){heroImage?.closest('.hero-image')?.classList.add('is-loaded');}
+    if(heroImage){if(heroImage.complete)markHeroImageReady();else heroImage.addEventListener('load',markHeroImageReady,{once:true});}
+    function startEffects(){document.body.classList.add('effects-ready');pointer.tx=window.innerWidth*.58;pointer.ty=window.innerHeight*.45;pointer.x=pointer.tx;pointer.y=pointer.ty;resize();if(!prefersReducedMotion)rafId=requestAnimationFrame(animate);}
+    if('requestIdleCallback'in window)requestIdleCallback(startEffects,{timeout:700});else window.setTimeout(startEffects,prefersReducedMotion?420:180);
   </script>
 </body>
 </html>

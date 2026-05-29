@@ -68,6 +68,19 @@ button {
   mix-blend-mode: screen;
 }
 
+html[data-quality-tier="low"] .scanlines {
+  opacity: 0.07;
+  background-size: 100% 6px;
+}
+
+html[data-quality-tier="low"] .hero-card,
+html[data-quality-tier="low"] .modal-card,
+html[data-quality-tier="low"] .hud__panel,
+html[data-quality-tier="low"] .fire-button,
+html[data-quality-tier="low"] .control-button {
+  backdrop-filter: blur(8px);
+}
+
 .screen {
   pointer-events: none;
   position: absolute;

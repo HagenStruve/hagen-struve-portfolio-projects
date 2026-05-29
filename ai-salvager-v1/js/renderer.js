@@ -1,3 +1,5 @@
+import { quality } from "./quality.js";
+
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -13,7 +15,7 @@ export class Renderer {
   }
 
   resize() {
-    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.dpr = Math.min(window.devicePixelRatio || 1, quality.dpr);
     this.width = Math.floor(window.visualViewport?.width || window.innerWidth);
     this.height = Math.floor(window.visualViewport?.height || window.innerHeight);
 

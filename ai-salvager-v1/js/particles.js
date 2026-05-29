@@ -1,3 +1,5 @@
+import { quality } from "./quality.js";
+
 const randomRange = (min, max) => min + Math.random() * (max - min);
 
 export class ParticleSystem {
@@ -7,7 +9,8 @@ export class ParticleSystem {
   }
 
   emitBurst(x, y, color, count = 18, power = 190) {
-    for (let i = 0; i < count; i++) {
+    const scaledCount = Math.max(2, Math.round(count * quality.particleScale));
+    for (let i = 0; i < scaledCount; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = randomRange(power * 0.28, power);
       const life = randomRange(0.38, 0.82);
@@ -22,12 +25,14 @@ export class ParticleSystem {
         color,
       });
     }
+    this.trim();
   }
 
   emitThruster(player, dt) {
     if (player.thrustPower <= 0.05) return;
     const speed = Math.hypot(player.vx, player.vy);
-    const threshold = speed > 460 ? 0.010 : 0.018;
+    const qualityDelay = quality.tier === "high" ? 1 : quality.tier === "medium" ? 1.45 : 2.1;
+    const threshold = (speed > 460 ? 0.010 : 0.018) * qualityDelay;
     this.thrusterClock += dt;
     if (this.thrusterClock < threshold) return;
     this.thrusterClock = 0;
@@ -47,19 +52,26 @@ export class ParticleSystem {
       maxLife: life,
       color: "rgba(68,247,255,",
     });
+    this.trim();
   }
 
   update(dt) {
-    for (const particle of this.particles) {
+    let write = 0;
+    for (let read = 0; read < this.particles.length; read++) {
+      const particle = this.particles[read];
       if (!particle.maxLife) particle.maxLife = particle.life;
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
       particle.vx *= Math.pow(0.12, dt);
       particle.vy *= Math.pow(0.12, dt);
       particle.life -= dt;
+      if (particle.life > 0) {
+        this.particles[write] = particle;
+        write += 1;
+      }
     }
 
-    this.particles = this.particles.filter((particle) => particle.life > 0);
+    this.particles.length = write;
   }
 
   draw(ctx) {
@@ -80,5 +92,11 @@ export class ParticleSystem {
   clear() {
     this.particles = [];
     this.thrusterClock = 0;
+  }
+
+  trim() {
+    if (this.particles.length > quality.maxParticles) {
+      this.particles.splice(0, this.particles.length - quality.maxParticles);
+    }
   }
 }

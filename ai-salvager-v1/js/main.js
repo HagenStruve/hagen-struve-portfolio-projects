@@ -8,6 +8,7 @@ import { ParticleSystem } from "./particles.js";
 import { UpgradePart, applyUpgrade, createDroppedPart } from "./upgrades.js";
 import { createPlayerShot } from "./projectiles.js";
 import { Drone } from "./enemies.js";
+import { quality } from "./quality.js";
 
 const canvas = document.querySelector("#gameCanvas");
 const startScreen = document.querySelector("#startScreen");
@@ -42,6 +43,17 @@ const input = new Input(canvas);
 const background = new SpaceBackground(renderer.width, renderer.height);
 const player = new Player(renderer.width * 0.5, renderer.height * 0.62);
 const particles = new ParticleSystem();
+let backgroundWidth = renderer.width;
+let backgroundHeight = renderer.height;
+let fpsPanel = null;
+let fpsTime = 0;
+let fpsFrames = 0;
+
+if (quality.debugFps) {
+  fpsPanel = document.createElement("div");
+  fpsPanel.style.cssText = "position:fixed;right:10px;top:10px;z-index:50;color:#44f7ff;background:rgba(0,0,0,.5);padding:4px 8px;font:12px monospace";
+  document.body.appendChild(fpsPanel);
+}
 
 const game = {
   state: "menu",
@@ -248,7 +260,11 @@ function mobileSpeed(value) {
 }
 
 function update(dt) {
-  background.resize(renderer.width, renderer.height);
+  if (renderer.width !== backgroundWidth || renderer.height !== backgroundHeight) {
+    backgroundWidth = renderer.width;
+    backgroundHeight = renderer.height;
+    background.resize(renderer.width, renderer.height);
+  }
   background.update(dt);
   particles.update(dt);
 
@@ -534,8 +550,19 @@ function loop(time = 0) {
 
   update(dt);
   draw();
+  updateFps(time);
 
   requestAnimationFrame(loop);
+}
+
+function updateFps(time) {
+  if (!fpsPanel) return;
+  fpsFrames += 1;
+  if (time - fpsTime >= 500) {
+    fpsPanel.textContent = `${Math.round((fpsFrames * 1000) / (time - fpsTime))} FPS / ${quality.tier}`;
+    fpsFrames = 0;
+    fpsTime = time;
+  }
 }
 
 setState("menu");

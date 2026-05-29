@@ -1,3 +1,5 @@
+import { scaleGlow } from "./quality.js";
+
 const randomRange = (min, max) => min + Math.random() * (max - min);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -128,7 +130,7 @@ export class Asteroid {
     ctx.rotate(this.rotation);
 
     ctx.shadowColor = "rgba(255,79,216,0.34)";
-    ctx.shadowBlur = 22;
+    ctx.shadowBlur = scaleGlow(22);
     ctx.fillStyle = "rgba(76, 82, 114, 0.92)";
     ctx.strokeStyle = "rgba(255, 176, 235, 0.42)";
     ctx.lineWidth = 1.5;

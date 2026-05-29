@@ -1,13 +1,18 @@
+import { quality } from "./quality.js";
+
 const randomRange = (min, max) => min + Math.random() * (max - min);
 
 export class SpaceBackground {
   constructor(width, height) {
+    const starScale = quality.starScale;
     this.layers = [
-      this.createStars(90, 0.18, 1.1),
-      this.createStars(60, 0.36, 1.8),
-      this.createStars(36, 0.7, 2.7),
+      this.createStars(Math.round(90 * starScale), 0.18, 1.1),
+      this.createStars(Math.round(60 * starScale), 0.36, 1.8),
+      this.createStars(Math.round(36 * starScale), 0.7, 2.7),
     ];
     this.nebulaOffset = 0;
+    this.cacheCanvas = document.createElement("canvas");
+    this.cacheCtx = this.cacheCanvas.getContext("2d", { alpha: false });
     this.resize(width, height);
   }
 
@@ -24,6 +29,9 @@ export class SpaceBackground {
   resize(width, height) {
     this.width = width;
     this.height = height;
+    this.cacheCanvas.width = Math.max(1, Math.floor(width));
+    this.cacheCanvas.height = Math.max(1, Math.floor(height));
+    this.drawBase(this.cacheCtx);
   }
 
   update(dt) {
@@ -42,6 +50,20 @@ export class SpaceBackground {
   }
 
   draw(ctx) {
+    ctx.drawImage(this.cacheCanvas, 0, 0, this.width, this.height);
+
+    for (const layer of this.layers) {
+      for (const star of layer) {
+        const alpha = 0.35 + Math.sin(star.pulse) * 0.22;
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(210, 250, 255, ${alpha})`;
+        ctx.arc(star.x * this.width, star.y * this.height, star.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  drawBase(ctx) {
     const gradient = ctx.createRadialGradient(
       this.width * 0.55,
       this.height * 0.38,
@@ -57,16 +79,6 @@ export class SpaceBackground {
     ctx.fillRect(0, 0, this.width, this.height);
 
     this.drawNebula(ctx);
-
-    for (const layer of this.layers) {
-      for (const star of layer) {
-        const alpha = 0.35 + Math.sin(star.pulse) * 0.22;
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(210, 250, 255, ${alpha})`;
-        ctx.arc(star.x * this.width, star.y * this.height, star.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
   }
 
   drawNebula(ctx) {

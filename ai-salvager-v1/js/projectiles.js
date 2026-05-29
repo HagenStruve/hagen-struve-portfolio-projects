@@ -1,3 +1,5 @@
+import { scaleGlow } from "./quality.js";
+
 export class Projectile {
   constructor({ x, y, vx, vy, owner, radius = 4, damage = 1, life = 1.4, color = "rgba(68,247,255," }) {
     this.x = x;
@@ -21,7 +23,7 @@ export class Projectile {
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     ctx.shadowColor = this.owner === "player" ? "rgba(68,247,255,0.9)" : "rgba(255,79,216,0.9)";
-    ctx.shadowBlur = 18;
+    ctx.shadowBlur = scaleGlow(18);
     ctx.fillStyle = `${this.color}0.95)`;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);

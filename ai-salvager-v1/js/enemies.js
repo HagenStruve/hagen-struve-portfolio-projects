@@ -1,4 +1,5 @@
 import { createEnemyShot } from "./projectiles.js";
+import { scaleGlow } from "./quality.js";
 
 const randomRange = (min, max) => min + Math.random() * (max - min);
 
@@ -50,7 +51,7 @@ export class Drone {
     ctx.globalCompositeOperation = "lighter";
 
     ctx.shadowColor = "rgba(255,79,216,0.7)";
-    ctx.shadowBlur = 22;
+    ctx.shadowBlur = scaleGlow(22);
     ctx.fillStyle = "rgba(35, 18, 64, 0.92)";
     ctx.strokeStyle = "rgba(255, 127, 231, 0.82)";
     ctx.lineWidth = 1.6;
