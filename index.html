@@ -43,8 +43,8 @@
       width: 100vw;
       height: 100vh;
       z-index: 0;
-      opacity: .72;
-      transition: opacity 900ms ease;
+      opacity: 0;
+      transition: opacity 1200ms ease;
       background:
         radial-gradient(circle at 68% 42%, rgba(105,240,138,.14), transparent 34rem),
         radial-gradient(circle at 18% 72%, rgba(116,240,223,.08), transparent 28rem),
@@ -595,6 +595,9 @@
     .contact { text-align: center; padding: 80px 24px; border-radius: 34px; border: 1px solid rgba(105,240,138,.32); background: radial-gradient(circle at 50% 0%, rgba(105,240,138,.14), transparent 42%), rgba(3,7,5,.9); backdrop-filter: blur(14px); box-shadow: 0 0 90px rgba(105,240,138,.08), 0 30px 120px rgba(0,0,0,.32); }
     .contact p { max-width: 760px; margin: 0 auto 28px; color: rgba(255,255,255,.9); font-size: 18px; line-height: 1.7; }
     footer { padding: 38px 0 60px; color: rgba(255,255,255,.44); text-align: center; }
+    .footer-links { display: inline-flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: center; margin-left: 10px; }
+    footer a { color: rgba(255,255,255,.66); transition: color .22s ease; }
+    footer a:hover { color: var(--green); }
     .reveal { opacity: 0; transform: translateY(26px); animation: reveal linear both; animation-timeline: view(); animation-range: entry 8% cover 35%; }
 
     @keyframes reveal { to { opacity: 1; transform: translateY(0); } }
@@ -822,7 +825,14 @@
       <div class="contact"><div class="kicker">Kontakt</div><h2>Ich suche einen Remote-Job, in dem ich mit KI echte Produkte bauen kann.</h2><p>Spannend sind Rollen als AI Product Builder, AI Automation Specialist, Junior Fullstack Developer, AgrarTech-Mitarbeiter oder technischer Produktentwickler.</p><div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;"><a class="btn" href="mailto:Struve94@web.de">E-Mail schreiben</a><a class="btn secondary" href="https://www.linkedin.com/in/hagen-struve-99a1611a2/" target="_blank" rel="noopener noreferrer">LinkedIn Profil ↗</a><a class="btn secondary" href="https://maschinenlog.de/" target="_blank" rel="noopener noreferrer">MaschinenLog ansehen ↗</a></div><p style="margin-top:22px;font-size:15px;color:rgba(255,255,255,.72);">Direktkontakt: Struve94@web.de</p></div>
     </section>
 
-    <footer>© 2026 Hagen Struve · hagen-struve.de · <a href="./hagen-struve-webseite/" style="color:rgba(255,255,255,.52);">Frühere Portfolio-Version</a></footer>
+    <footer>
+      © 2026 Hagen Struve · hagen-struve.de
+      <span class="footer-links">
+        <a href="./legal/impressum.html">Impressum</a>
+        <a href="./legal/datenschutz.html">Datenschutz</a>
+        <a href="./legal/cookie-hinweis.html">Cookie-Hinweis</a>
+      </span>
+    </footer>
   </main>
 
   <script>
@@ -846,8 +856,9 @@
     document.addEventListener('visibilitychange',()=>{running=!document.hidden;if(running&&!rafId&&!prefersReducedMotion)rafId=requestAnimationFrame(animate);if(!running&&rafId){cancelAnimationFrame(rafId);rafId=null;}});
     function markHeroImageReady(){heroImage?.closest('.hero-image')?.classList.add('is-loaded');}
     if(heroImage){if(heroImage.complete)markHeroImageReady();else heroImage.addEventListener('load',markHeroImageReady,{once:true});}
-    function startEffects(){document.body.classList.add('effects-ready');pointer.tx=window.innerWidth*.58;pointer.ty=window.innerHeight*.45;pointer.x=pointer.tx;pointer.y=pointer.ty;resize();if(!prefersReducedMotion)rafId=requestAnimationFrame(animate);}
-    if('requestIdleCallback'in window)requestIdleCallback(startEffects,{timeout:700});else window.setTimeout(startEffects,prefersReducedMotion?420:180);
+    function startEffects(){pointer.tx=window.innerWidth*.58;pointer.ty=window.innerHeight*.45;pointer.x=pointer.tx;pointer.y=pointer.ty;resize();document.body.classList.add('effects-ready');if(!prefersReducedMotion)rafId=requestAnimationFrame(animate);}
+    function queueStartEffects(){window.setTimeout(startEffects,prefersReducedMotion?520:280);}
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',queueStartEffects,{once:true});else queueStartEffects();
   </script>
 </body>
 </html>
